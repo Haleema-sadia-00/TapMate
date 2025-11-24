@@ -13,18 +13,17 @@ class TapMateApp extends StatelessWidget {
     return MaterialApp(
       title: 'TapMate',
       theme: ThemeData(
-        // 🔥 YOUTUBE RED AS PRIMARY
-        primaryColor: const Color(0xFFFF0000),
-        scaffoldBackgroundColor: Colors.white,
+        primaryColor: const Color(0xFF6A1E55),
+        scaffoldBackgroundColor: const Color(0xFF1A1A1D),
         useMaterial3: true,
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFFFF0000),
+          backgroundColor: Color(0xFF3B1C32),
           foregroundColor: Colors.white,
           elevation: 0,
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFFF0000), // YouTube Red
+            backgroundColor: const Color(0xFFA64D79),
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
             shape: RoundedRectangleBorder(

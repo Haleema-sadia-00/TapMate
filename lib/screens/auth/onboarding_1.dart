@@ -1,66 +1,62 @@
 import 'package:flutter/material.dart';
 
+
 class Onboarding1 extends StatelessWidget {
   const Onboarding1({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFF1A1A1D),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
           child: Column(
             children: [
               const Spacer(),
-              // 🔥 MULTIPLATFORM CIRCLE
               Container(
-                width: 200,
-                height: 200,
+                width: 140,
+                height: 140,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [
-                      Color(0xFFFF0000), // YT
-                      Color(0xFFE4405F), // IG
-                      Color(0xFF1877F2), // FB
-                      Color(0xFF000000), // TT
+                      Color(0xFFA64D79),
+                      Color(0xFF6A1E55),
                     ],
                   ),
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
+                      color: const Color(0xFFA64D79).withOpacity(0.4),
                       blurRadius: 15,
-                      offset: const Offset(0, 5),
                     ),
                   ],
                 ),
                 child: const Icon(
-                  Icons.download_for_offline_outlined,
-                  size: 80,
+                  Icons.touch_app,
+                  size: 70,
                   color: Colors.white,
                 ),
               ),
               const SizedBox(height: 40),
               const Text(
-                'All Platforms Supported',
+                'One-Tap Downloads',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B),
+                  color: Colors.white,
                 ),
               ),
               const SizedBox(height: 20),
               const Text(
-                'Download from YouTube, Instagram, Facebook, TikTok, WhatsApp and more with just one tap!',
+                'Simply tap the floating button to download videos from any platform',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
-                  color: Color(0xFF64748B),
+                  color: Colors.white70,
                 ),
               ),
               const Spacer(),
-              // 🔥 YOUTUBE RED BUTTON
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -71,7 +67,7 @@ class Onboarding1 extends StatelessWidget {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF0000),
+                    backgroundColor: const Color(0xFFA64D79),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
