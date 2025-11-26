@@ -8,7 +8,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+<<<<<<< HEAD
 import 'package:tapmate/main.dart';
+=======
+import 'package:tapmatefyp/main.dart';
+>>>>>>> 1e96176 (Add Android/Flutter project files)
 
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {

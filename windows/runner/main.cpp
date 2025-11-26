@@ -27,7 +27,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   FlutterWindow window(project);
   Win32Window::Point origin(10, 10);
   Win32Window::Size size(1280, 720);
+<<<<<<< HEAD
   if (!window.Create(L"tapmate", origin, size)) {
+=======
+  if (!window.Create(L"tapmatefyp", origin, size)) {
+>>>>>>> 1e96176 (Add Android/Flutter project files)
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);

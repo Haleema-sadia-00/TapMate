@@ -90,12 +90,21 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
+<<<<<<< HEAD
             VALUE "FileDescription", "tapmate" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "tapmate" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2025 com.example. All rights reserved." "\0"
             VALUE "OriginalFilename", "tapmate.exe" "\0"
             VALUE "ProductName", "tapmate" "\0"
+=======
+            VALUE "FileDescription", "tapmatefyp" "\0"
+            VALUE "FileVersion", VERSION_AS_STRING "\0"
+            VALUE "InternalName", "tapmatefyp" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2025 com.example. All rights reserved." "\0"
+            VALUE "OriginalFilename", "tapmatefyp.exe" "\0"
+            VALUE "ProductName", "tapmatefyp" "\0"
+>>>>>>> 1e96176 (Add Android/Flutter project files)
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

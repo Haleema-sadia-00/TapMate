@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # tapmate
+=======
+# tapmatefyp
+>>>>>>> 1e96176 (Add Android/Flutter project files)
 
 A new Flutter project.
 
