@@ -1,29 +1,49 @@
 import 'package:flutter/material.dart';
-import 'package:tapmatefyp/screens/auth/onboarding_1.dart';
-import 'package:tapmatefyp/screens/auth/splash_screen.dart';
-import 'CustomScreen.dart';
-import 'LoginScreen.dart';
-import 'SignupScreen.dart';
-import 'resetpasswordScreen.dart';
+import 'screens/auth/splash_screen.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const TapMateApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class TapMateApp extends StatelessWidget {
+  const TapMateApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'TapMate',
       theme: ThemeData(
-        primaryColor: const Color(0xFFA64D79), // Primary button color
+        // 🔥 PINKISH-PURPLE FOCUS
+        primaryColor: const Color(0xFFA64D79), // Pink-Purple Priority
+        scaffoldBackgroundColor: Colors.white,
+        useMaterial3: true,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          foregroundColor: Color(0xFFA64D79), // 🔥 Pink-Purple Text
+          elevation: 1,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFA64D79), // Pink Buttons
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        textTheme: const TextTheme(
+          displayLarge: TextStyle(
+            color: Color(0xFFA64D79), // 🔥 Pink-Purple Headings
+            fontWeight: FontWeight.bold,
+          ),
+          bodyLarge: TextStyle(
+            color: Colors.black87, // Dark Text for readability
+          ),
+        ),
       ),
+      home: const SplashScreen(),
       debugShowCheckedModeBanner: false,
-      // home: const OnboardingScreen(),
-      // home: const Onboarding1(),
-      // home: const SplashScreen(),
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tapmatefyp/screens/home/home_screen.dart';
 
 class SignupScreen extends StatelessWidget {
   const SignupScreen({super.key});
@@ -32,7 +33,11 @@ class SignupScreen extends StatelessWidget {
               CircleAvatar(
                 radius: 35,
                 backgroundColor: const Color(0xFFA64D79), // PINK PURPLE
-                child: const Icon(Icons.download, color: Colors.white, size: 40),
+                child: const Icon(
+                  Icons.download,
+                  color: Colors.white,
+                  size: 40,
+                ),
               ),
 
               const SizedBox(height: 20),
@@ -60,7 +65,10 @@ class SignupScreen extends StatelessWidget {
               TextField(
                 style: const TextStyle(color: Colors.black87),
                 decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.person_outline, color: Colors.black54),
+                  prefixIcon: const Icon(
+                    Icons.person_outline,
+                    color: Colors.black54,
+                  ),
                   hintText: "Full Name",
                   hintStyle: const TextStyle(color: Colors.black38),
                   filled: true,
@@ -78,7 +86,10 @@ class SignupScreen extends StatelessWidget {
               TextField(
                 style: const TextStyle(color: Colors.black87),
                 decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.email_outlined, color: Colors.black54),
+                  prefixIcon: const Icon(
+                    Icons.email_outlined,
+                    color: Colors.black54,
+                  ),
                   hintText: "Email Address",
                   hintStyle: const TextStyle(color: Colors.black38),
                   filled: true,
@@ -97,7 +108,10 @@ class SignupScreen extends StatelessWidget {
                 obscureText: true,
                 style: const TextStyle(color: Colors.black87),
                 decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.lock_outline, color: Colors.black54),
+                  prefixIcon: const Icon(
+                    Icons.lock_outline,
+                    color: Colors.black54,
+                  ),
                   hintText: "Password",
                   hintStyle: const TextStyle(color: Colors.black38),
                   filled: true,
@@ -138,7 +152,12 @@ class SignupScreen extends StatelessWidget {
                     backgroundColor: const Color(0xFFA64D79), // PINK PURPLE
                   ),
                   onPressed: () {
-                    print("Create Account Clicked");
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const HomeScreen(),
+                      ),
+                    );
                   },
                   child: const Text(
                     "Create Account",
@@ -174,7 +193,7 @@ class SignupScreen extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                  )
+                  ),
                 ],
               ),
 
@@ -211,7 +230,12 @@ class SignupScreen extends StatelessWidget {
     );
   }
 
-  Widget _socialButton(String title, IconData icon, Color iconColor, VoidCallback onTap) {
+  Widget _socialButton(
+      String title,
+      IconData icon,
+      Color iconColor,
+      VoidCallback onTap,
+      ) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -238,3 +262,4 @@ class SignupScreen extends StatelessWidget {
     );
   }
 }
+

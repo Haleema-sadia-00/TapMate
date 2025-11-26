@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'LoginScreen.dart';
+import 'package:tapmatefyp/screens/auth/LoginScreen.dart';
 import 'CustomScreen.dart';
 
 class OnboardingScreen extends StatelessWidget {

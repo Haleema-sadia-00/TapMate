@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:tapmatefyp/resetpasswordScreen.dart';
+import 'package:tapmatefyp/screens/auth/SignupScreen.dart';
+import 'package:tapmatefyp/screens/auth/resetpasswordScreen.dart';
 
-import 'SignupScreen.dart';
+
 
 
 class LoginScreen extends StatefulWidget {
@@ -17,7 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:  Color(0xFFF6F2F6),
+      backgroundColor: const Color(0xFFF6F2F6),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
