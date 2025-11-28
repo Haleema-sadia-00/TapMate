@@ -61,11 +61,24 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
               const SizedBox(height: 20),
 
-              // Logo
-              CircleAvatar(
-                radius: 35,
-                backgroundColor: const Color(0xFFA64D79),
-                child: const Icon(Icons.download, color: Colors.white, size: 40),
+              // Logo with gradient
+              Container(
+                width: 70, // radius 35 * 2
+                height: 70,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(0xFFA64D79), // Pink-Purple
+                      Color(0xFF6A1E55), // Darker Purple
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: const Center(
+                  child: Icon(Icons.download, color: Colors.white, size: 40),
+                ),
               ),
 
               const SizedBox(height: 20),
@@ -132,7 +145,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               // Reset Button
               SizedBox(
                 width: double.infinity,
-                height: 48,
+                height: 55,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFA64D79),
@@ -148,6 +161,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
+                      fontSize: 16,
                     ),
                   ),
                 ),

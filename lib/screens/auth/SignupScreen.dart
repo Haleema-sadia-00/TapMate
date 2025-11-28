@@ -19,21 +19,18 @@ class _SignupScreenState extends State<SignupScreen> {
   String? _passwordError;
   String? _recoveryEmailError;
 
-  // Email Validator
   bool _isValidEmail(String email) {
     return RegExp(r"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$").hasMatch(email);
   }
 
   void _validateInputs() {
     setState(() {
-      // Name validation
       if (_nameController.text.trim().isEmpty) {
         _nameError = "Full Name is required";
       } else {
         _nameError = null;
       }
 
-      // Email validation
       if (_emailController.text.trim().isEmpty) {
         _emailError = "Email is required";
       } else if (!_isValidEmail(_emailController.text.trim())) {
@@ -42,7 +39,6 @@ class _SignupScreenState extends State<SignupScreen> {
         _emailError = null;
       }
 
-      // Password validation
       if (_passwordController.text.isEmpty) {
         _passwordError = "Password is required";
       } else if (_passwordController.text.length < 6) {
@@ -51,7 +47,6 @@ class _SignupScreenState extends State<SignupScreen> {
         _passwordError = null;
       }
 
-      // Recovery Email validation (optional)
       if (_recoveryEmailController.text.trim().isNotEmpty &&
           !_isValidEmail(_recoveryEmailController.text.trim())) {
         _recoveryEmailError = "Invalid recovery email";
@@ -74,6 +69,7 @@ class _SignupScreenState extends State<SignupScreen> {
             children: [
               const SizedBox(height: 30),
 
+              // Back Button
               Row(
                 children: [
                   IconButton(
@@ -85,10 +81,24 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: 10),
 
-              CircleAvatar(
-                radius: 35,
-                backgroundColor: const Color(0xFFA64D79),
-                child: const Icon(Icons.download, color: Colors.white, size: 40),
+              // Gradient Logo
+              Container(
+                width: 70,
+                height: 70,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(0xFFA64D79),
+                      Color(0xFF6A1E55),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: const Center(
+                  child: Icon(Icons.download, color: Colors.white, size: 40),
+                ),
               ),
 
               const SizedBox(height: 20),
@@ -120,8 +130,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     controller: _nameController,
                     onChanged: (_) => _validateInputs(),
                     decoration: InputDecoration(
-                      prefixIcon:
-                      const Icon(Icons.person_outline, color: Colors.black54),
+                      prefixIcon: const Icon(Icons.person_outline, color: Colors.black54),
                       hintText: "Full Name",
                       filled: true,
                       fillColor: const Color(0xFFF0F0F0),
@@ -148,8 +157,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     controller: _emailController,
                     onChanged: (_) => _validateInputs(),
                     decoration: InputDecoration(
-                      prefixIcon:
-                      const Icon(Icons.email_outlined, color: Colors.black54),
+                      prefixIcon: const Icon(Icons.email_outlined, color: Colors.black54),
                       hintText: "Email Address",
                       filled: true,
                       fillColor: const Color(0xFFF0F0F0),
@@ -177,8 +185,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     obscureText: true,
                     onChanged: (_) => _validateInputs(),
                     decoration: InputDecoration(
-                      prefixIcon:
-                      const Icon(Icons.lock_outline, color: Colors.black54),
+                      prefixIcon: const Icon(Icons.lock_outline, color: Colors.black54),
                       hintText: "Password",
                       filled: true,
                       fillColor: const Color(0xFFF0F0F0),
@@ -224,9 +231,10 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: 20),
 
+              // Create Account Button
               SizedBox(
                 width: double.infinity,
-                height: 48,
+                height: 55,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFA64D79),
@@ -246,29 +254,23 @@ class _SignupScreenState extends State<SignupScreen> {
                   },
                   child: const Text(
                     "Create Account",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ),
               ),
 
               const SizedBox(height: 15),
 
+              // Sign In Redirect
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text("Already have an account? ",
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text("Already have an account? ", style: TextStyle(fontWeight: FontWeight.bold)),
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
                     child: const Text(
                       "Sign In",
-                      style: TextStyle(
-                        color: Color(0xFFA64D79),
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: TextStyle(color: Color(0xFFA64D79), fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
@@ -276,12 +278,13 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: 20),
 
+              // Social Buttons (PNG logos)
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _socialButton("Google", Icons.g_mobiledata, Colors.red, () {}),
+                  _socialButtonImage("Google", 'assets/icons/google_logo.png', () {}),
                   const SizedBox(width: 20),
-                  _socialButton("Facebook", Icons.facebook, Colors.blue, () {}),
+                  _socialButtonImage("Facebook", 'assets/icons/facebook_logo.png', () {}),
                 ],
               ),
 
@@ -293,8 +296,8 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  Widget _socialButton(
-      String title, IconData icon, Color iconColor, VoidCallback onTap) {
+  // Social button using PNG image
+  Widget _socialButtonImage(String title, String assetPath, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -306,11 +309,9 @@ class _SignupScreenState extends State<SignupScreen> {
         ),
         child: Row(
           children: [
-            Icon(icon, color: iconColor),
+            Image.asset(assetPath, width: 24, height: 24),
             const SizedBox(width: 5),
-            Text(title,
-                style:
-                const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
           ],
         ),
       ),
