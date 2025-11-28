@@ -1,12 +1,38 @@
 import 'package:flutter/material.dart';
 
-class ResetPasswordScreen extends StatelessWidget {
+class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({super.key});
+
+  @override
+  State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
+}
+
+class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
+  final TextEditingController _emailController = TextEditingController();
+  String? _emailError;
+
+  bool _isEmailValid(String email) {
+    return RegExp(r"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$").hasMatch(email);
+  }
+
+  void _validateEmail() {
+    final email = _emailController.text.trim();
+
+    setState(() {
+      if (email.isEmpty) {
+        _emailError = "Email is required";
+      } else if (!_isEmailValid(email)) {
+        _emailError = "Enter a valid email address";
+      } else {
+        _emailError = null;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // 🔹 Light background
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -38,7 +64,7 @@ class ResetPasswordScreen extends StatelessWidget {
               // Logo
               CircleAvatar(
                 radius: 35,
-                backgroundColor: const Color(0xFFA64D79), // PINK PURPLE
+                backgroundColor: const Color(0xFFA64D79),
                 child: const Icon(Icons.download, color: Colors.white, size: 40),
               ),
 
@@ -49,7 +75,7 @@ class ResetPasswordScreen extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF6A1E55), // DEEP PURPLE
+                  color: Color(0xFF6A1E55),
                 ),
               ),
 
@@ -59,27 +85,46 @@ class ResetPasswordScreen extends StatelessWidget {
                 "Enter your email address and we’ll send\nyou a link to reset your password.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.black54, // Secondary Text for light background
+                  color: Colors.black54,
                   fontWeight: FontWeight.bold,
                 ),
               ),
 
               const SizedBox(height: 25),
 
-              // Email Field
-              TextField(
-                style: const TextStyle(color: Colors.black87),
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.email_outlined, color: Colors.black54),
-                  hintText: "Email Address",
-                  hintStyle: const TextStyle(color: Colors.black38),
-                  filled: true,
-                  fillColor: const Color(0xFFF0F0F0), // Light card background
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.black12),
+              // Email Field + Error
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _emailController,
+                    onChanged: (_) => _validateEmail(),
+                    style: const TextStyle(color: Colors.black87),
+                    decoration: InputDecoration(
+                      prefixIcon:
+                      const Icon(Icons.email_outlined, color: Colors.black54),
+                      hintText: "Email Address",
+                      filled: true,
+                      fillColor: const Color(0xFFF0F0F0),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.black12),
+                      ),
+                    ),
                   ),
-                ),
+                  if (_emailError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6, left: 4),
+                      child: Text(
+                        _emailError!,
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                ],
               ),
 
               const SizedBox(height: 20),
@@ -90,9 +135,14 @@ class ResetPasswordScreen extends StatelessWidget {
                 height: 48,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFA64D79), // PINK PURPLE BUTTON
+                    backgroundColor: const Color(0xFFA64D79),
                   ),
-                  onPressed: () {},
+                  onPressed: () {
+                    _validateEmail();
+                    if (_emailError == null) {
+                      // Email is valid — proceed
+                    }
+                  },
                   child: const Text(
                     "Send Reset Link",
                     style: TextStyle(

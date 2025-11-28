@@ -1,12 +1,70 @@
 import 'package:flutter/material.dart';
+import 'package:tapmatefyp/screens/home/home_screen.dart';
 
-class SignupScreen extends StatelessWidget {
+class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
+
+  @override
+  State<SignupScreen> createState() => _SignupScreenState();
+}
+
+class _SignupScreenState extends State<SignupScreen> {
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _recoveryEmailController = TextEditingController();
+
+  String? _nameError;
+  String? _emailError;
+  String? _passwordError;
+  String? _recoveryEmailError;
+
+  // Email Validator
+  bool _isValidEmail(String email) {
+    return RegExp(r"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$").hasMatch(email);
+  }
+
+  void _validateInputs() {
+    setState(() {
+      // Name validation
+      if (_nameController.text.trim().isEmpty) {
+        _nameError = "Full Name is required";
+      } else {
+        _nameError = null;
+      }
+
+      // Email validation
+      if (_emailController.text.trim().isEmpty) {
+        _emailError = "Email is required";
+      } else if (!_isValidEmail(_emailController.text.trim())) {
+        _emailError = "Enter a valid email";
+      } else {
+        _emailError = null;
+      }
+
+      // Password validation
+      if (_passwordController.text.isEmpty) {
+        _passwordError = "Password is required";
+      } else if (_passwordController.text.length < 6) {
+        _passwordError = "Password must be at least 6 characters";
+      } else {
+        _passwordError = null;
+      }
+
+      // Recovery Email validation (optional)
+      if (_recoveryEmailController.text.trim().isNotEmpty &&
+          !_isValidEmail(_recoveryEmailController.text.trim())) {
+        _recoveryEmailError = "Invalid recovery email";
+      } else {
+        _recoveryEmailError = null;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // 🔹 Light background
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -16,7 +74,6 @@ class SignupScreen extends StatelessWidget {
             children: [
               const SizedBox(height: 30),
 
-              // 🔙 Back Button
               Row(
                 children: [
                   IconButton(
@@ -28,10 +85,9 @@ class SignupScreen extends StatelessWidget {
 
               const SizedBox(height: 10),
 
-              // Logo
               CircleAvatar(
                 radius: 35,
-                backgroundColor: const Color(0xFFA64D79), // PINK PURPLE
+                backgroundColor: const Color(0xFFA64D79),
                 child: const Icon(Icons.download, color: Colors.white, size: 40),
               ),
 
@@ -42,7 +98,7 @@ class SignupScreen extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF6A1E55), // DEEP PURPLE
+                  color: Color(0xFF6A1E55),
                 ),
               ),
               const SizedBox(height: 5),
@@ -57,88 +113,136 @@ class SignupScreen extends StatelessWidget {
               const SizedBox(height: 25),
 
               // Full Name
-              TextField(
-                style: const TextStyle(color: Colors.black87),
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.person_outline, color: Colors.black54),
-                  hintText: "Full Name",
-                  hintStyle: const TextStyle(color: Colors.black38),
-                  filled: true,
-                  fillColor: const Color(0xFFF0F0F0), // Light card background
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.black12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _nameController,
+                    onChanged: (_) => _validateInputs(),
+                    decoration: InputDecoration(
+                      prefixIcon:
+                      const Icon(Icons.person_outline, color: Colors.black54),
+                      hintText: "Full Name",
+                      filled: true,
+                      fillColor: const Color(0xFFF0F0F0),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
-                ),
+                  if (_nameError != null)
+                    Text(
+                      _nameError!,
+                      style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                    ),
+                ],
               ),
 
               const SizedBox(height: 15),
 
               // Email
-              TextField(
-                style: const TextStyle(color: Colors.black87),
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.email_outlined, color: Colors.black54),
-                  hintText: "Email Address",
-                  hintStyle: const TextStyle(color: Colors.black38),
-                  filled: true,
-                  fillColor: const Color(0xFFF0F0F0),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.black12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _emailController,
+                    onChanged: (_) => _validateInputs(),
+                    decoration: InputDecoration(
+                      prefixIcon:
+                      const Icon(Icons.email_outlined, color: Colors.black54),
+                      hintText: "Email Address",
+                      filled: true,
+                      fillColor: const Color(0xFFF0F0F0),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
-                ),
+                  if (_emailError != null)
+                    Text(
+                      _emailError!,
+                      style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                    ),
+                ],
               ),
 
               const SizedBox(height: 15),
 
               // Password
-              TextField(
-                obscureText: true,
-                style: const TextStyle(color: Colors.black87),
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.lock_outline, color: Colors.black54),
-                  hintText: "Password",
-                  hintStyle: const TextStyle(color: Colors.black38),
-                  filled: true,
-                  fillColor: const Color(0xFFF0F0F0),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.black12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    onChanged: (_) => _validateInputs(),
+                    decoration: InputDecoration(
+                      prefixIcon:
+                      const Icon(Icons.lock_outline, color: Colors.black54),
+                      hintText: "Password",
+                      filled: true,
+                      fillColor: const Color(0xFFF0F0F0),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
-                ),
+                  if (_passwordError != null)
+                    Text(
+                      _passwordError!,
+                      style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                    ),
+                ],
               ),
 
               const SizedBox(height: 15),
 
               // Recovery Email
-              TextField(
-                style: const TextStyle(color: Colors.black87),
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.email, color: Colors.black54),
-                  hintText: "Recovery Email (Optional)",
-                  hintStyle: const TextStyle(color: Colors.black38),
-                  filled: true,
-                  fillColor: const Color(0xFFF0F0F0),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.black12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _recoveryEmailController,
+                    onChanged: (_) => _validateInputs(),
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.email, color: Colors.black54),
+                      hintText: "Recovery Email (Optional)",
+                      filled: true,
+                      fillColor: const Color(0xFFF0F0F0),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
-                ),
+                  if (_recoveryEmailError != null)
+                    Text(
+                      _recoveryEmailError!,
+                      style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                    ),
+                ],
               ),
 
               const SizedBox(height: 20),
 
-              // Create Account Button
               SizedBox(
                 width: double.infinity,
                 height: 48,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFA64D79), // PINK PURPLE
+                    backgroundColor: const Color(0xFFA64D79),
                   ),
                   onPressed: () {
-                    print("Create Account Clicked");
+                    _validateInputs();
+
+                    if (_nameError == null &&
+                        _emailError == null &&
+                        _passwordError == null &&
+                        _recoveryEmailError == null) {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => const HomeScreen()),
+                      );
+                    }
                   },
                   child: const Text(
                     "Create Account",
@@ -152,21 +256,13 @@ class SignupScreen extends StatelessWidget {
 
               const SizedBox(height: 15),
 
-              // Already have account
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
-                    "Already have an account? ",
-                    style: TextStyle(
-                      color: Colors.black87,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  const Text("Already have an account? ",
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                   GestureDetector(
-                    onTap: () {
-                      print("Navigate to Sign In");
-                    },
+                    onTap: () => Navigator.pop(context),
                     child: const Text(
                       "Sign In",
                       style: TextStyle(
@@ -174,36 +270,22 @@ class SignupScreen extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                  )
+                  ),
                 ],
               ),
 
-              const SizedBox(height: 15),
-
-              const Text(
-                "Or continue as Guest",
-                style: TextStyle(
-                  color: Colors.black54,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
 
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _socialButton("Google", Icons.g_mobiledata, Colors.red, () {
-                    print("Google Sign In Clicked");
-                  }),
+                  _socialButton("Google", Icons.g_mobiledata, Colors.red, () {}),
                   const SizedBox(width: 20),
-                  _socialButton("Facebook", Icons.facebook, Colors.blue, () {
-                    print("Facebook Sign In Clicked");
-                  }),
+                  _socialButton("Facebook", Icons.facebook, Colors.blue, () {}),
                 ],
               ),
 
-              const SizedBox(height: 30), // extra spacing at bottom
+              const SizedBox(height: 30),
             ],
           ),
         ),
@@ -211,7 +293,8 @@ class SignupScreen extends StatelessWidget {
     );
   }
 
-  Widget _socialButton(String title, IconData icon, Color iconColor, VoidCallback onTap) {
+  Widget _socialButton(
+      String title, IconData icon, Color iconColor, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -219,19 +302,15 @@ class SignupScreen extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: Colors.black12),
-          color: const Color(0xFFF0F0F0), // Light card background
+          color: const Color(0xFFF0F0F0),
         ),
         child: Row(
           children: [
             Icon(icon, color: iconColor),
             const SizedBox(width: 5),
-            Text(
-              title,
-              style: const TextStyle(
-                color: Colors.black87,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            Text(title,
+                style:
+                const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
           ],
         ),
       ),
