@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:tapmatefyp/resetpasswordScreen.dart';
+
+import 'package:tapmatefyp/screens/auth/resetpasswordScreen.dart';
 
 import 'SignupScreen.dart';
 
