@@ -282,9 +282,23 @@ class _SignupScreenState extends State<SignupScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _socialButtonImage("Google", 'assets/icons/google_logo.png', () {}),
+                  _socialButtonImage("Google", 'assets/icons/google_logo.png', () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Google button tapped"),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                  }),
                   const SizedBox(width: 20),
-                  _socialButtonImage("Facebook", 'assets/icons/facebook_logo.png', () {}),
+                  _socialButtonImage("Facebook", 'assets/icons/facebook_logo.png', () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Facebook button tapped"),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                  }),
                 ],
               ),
 

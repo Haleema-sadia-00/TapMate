@@ -70,6 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 30),
+
                 // EMAIL FIELD
                 TextFormField(
                   controller: _emailController,
@@ -86,7 +87,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     return null;
                   },
                 ),
+
                 const SizedBox(height: 15),
+
                 // PASSWORD FIELD
                 TextFormField(
                   controller: _passwordController,
@@ -108,13 +111,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     return null;
                   },
                 ),
+
                 const SizedBox(height: 10),
+
                 // FORGOT PASSWORD
                 Align(
                   alignment: Alignment.centerRight,
                   child: GestureDetector(
                     onTap: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const ResetPasswordScreen()));
+                      Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const ResetPasswordScreen()));
                     },
                     child: const Text(
                       "Forgot Password?",
@@ -122,7 +128,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 20),
+
                 // SIGN IN BUTTON
                 SizedBox(
                   width: double.infinity,
@@ -156,23 +164,32 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 15),
+
                 // SIGN UP TEXT
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text("Don't have an account? ",
-                        style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+                    const Text(
+                      "Don't have an account? ",
+                      style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+                    ),
                     GestureDetector(
                       onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const SignupScreen()));
+                        Navigator.push(
+                            context, MaterialPageRoute(builder: (_) => const SignupScreen()));
                       },
-                      child: const Text("Sign Up",
-                          style: TextStyle(color: Color(0xFFA64D79), fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        "Sign Up",
+                        style: TextStyle(color: Color(0xFFA64D79), fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 10),
+
                 // CONTINUE AS GUEST
                 GestureDetector(
                   onTap: () {
@@ -183,19 +200,46 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
                   ),
                 ),
+
                 const SizedBox(height: 25),
-                const Text("Or continue with",
-                    style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+
+                const Text(
+                  "Or continue with",
+                  style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+                ),
+
                 const SizedBox(height: 10),
+
                 // SOCIAL BUTTONS
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _socialButtonImage("Google", 'assets/icons/google_logo.png'),
+                    GestureDetector(
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Google button tapped"),
+                            duration: Duration(seconds: 1),
+                          ),
+                        );
+                      },
+                      child: _socialButtonImage("Google", 'assets/icons/google_logo.png'),
+                    ),
                     const SizedBox(width: 20),
-                    _socialButtonImage("Facebook", 'assets/icons/facebook_logo.png'),
+                    GestureDetector(
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Facebook button tapped"),
+                            duration: Duration(seconds: 1),
+                          ),
+                        );
+                      },
+                      child: _socialButtonImage("Facebook", 'assets/icons/facebook_logo.png'),
+                    ),
                   ],
                 ),
+
                 const SizedBox(height: 40),
               ],
             ),
@@ -218,7 +262,10 @@ class _LoginScreenState extends State<LoginScreen> {
         children: [
           Image.asset(assetPath, width: 24, height: 24),
           const SizedBox(width: 5),
-          Text(title, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+          Text(
+            title,
+            style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+          ),
         ],
       ),
     );
