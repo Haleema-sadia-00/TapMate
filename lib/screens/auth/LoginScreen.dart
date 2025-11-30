@@ -14,7 +14,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
 
   final _formKey = GlobalKey<FormState>();
-
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
@@ -70,7 +69,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 30),
-
                 // EMAIL FIELD
                 TextFormField(
                   controller: _emailController,
@@ -87,9 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     return null;
                   },
                 ),
-
                 const SizedBox(height: 15),
-
                 // PASSWORD FIELD
                 TextFormField(
                   controller: _passwordController,
@@ -111,9 +107,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     return null;
                   },
                 ),
-
                 const SizedBox(height: 10),
-
                 // FORGOT PASSWORD
                 Align(
                   alignment: Alignment.centerRight,
@@ -128,21 +122,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 20),
-
-                // SIGN IN BUTTON
+                // SIGN IN BUTTON WITH GRADIENT
                 SizedBox(
                   width: double.infinity,
                   height: 55,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFA64D79),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
+                  child: TextButton(
                     onPressed: () {
                       if (_formKey.currentState!.validate()) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -154,19 +139,35 @@ class _LoginScreenState extends State<LoginScreen> {
                         );
                       }
                     },
-                    child: const Text(
-                      "Sign In",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Ink(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF6A1E55), Color(0xFFA64D79)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Center(
+                        child: Text(
+                          "Sign In",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 15),
-
                 // SIGN UP TEXT
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -187,9 +188,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 10),
-
                 // CONTINUE AS GUEST
                 GestureDetector(
                   onTap: () {
@@ -197,19 +196,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                   child: const Text(
                     "Continue as Guest",
-                    style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
                   ),
                 ),
-
                 const SizedBox(height: 25),
-
                 const Text(
                   "Or continue with",
                   style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
                 ),
-
                 const SizedBox(height: 10),
-
                 // SOCIAL BUTTONS
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -239,7 +234,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 40),
               ],
             ),

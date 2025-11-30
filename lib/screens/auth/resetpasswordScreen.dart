@@ -63,14 +63,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
               // Logo with gradient
               Container(
-                width: 70, // radius 35 * 2
+                width: 70,
                 height: 70,
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
                     colors: [
-                      Color(0xFFA64D79), // Pink-Purple
-                      Color(0xFF6A1E55), // Darker Purple
+                      Color(0xFFA64D79),
+                      Color(0xFF6A1E55),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -142,26 +142,41 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
               const SizedBox(height: 20),
 
-              // Reset Button
+              // Reset Button with gradient
               SizedBox(
                 width: double.infinity,
                 height: 55,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFA64D79),
-                  ),
+                child: TextButton(
                   onPressed: () {
                     _validateEmail();
                     if (_emailError == null) {
                       // Email is valid — proceed
                     }
                   },
-                  child: const Text(
-                    "Send Reset Link",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Ink(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF6A1E55), Color(0xFFA64D79)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        "Send Reset Link",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
                     ),
                   ),
                 ),

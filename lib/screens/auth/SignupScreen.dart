@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tapmatefyp/screens/auth/permissionscreen.dart';
 import 'package:tapmatefyp/screens/home/home_screen.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -231,14 +232,11 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: 20),
 
-              // Create Account Button
+              // Create Account Button with gradient
               SizedBox(
                 width: double.infinity,
                 height: 55,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFA64D79),
-                  ),
+                child: TextButton(
                   onPressed: () {
                     _validateInputs();
 
@@ -248,13 +246,35 @@ class _SignupScreenState extends State<SignupScreen> {
                         _recoveryEmailError == null) {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (context) => const HomeScreen()),
+                        MaterialPageRoute(builder: (context) => const PermissionScreen()),
                       );
                     }
                   },
-                  child: const Text(
-                    "Create Account",
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Ink(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF6A1E55), Color(0xFFA64D79)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Center(
+                      child: Text(
+                        "Create Account",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
