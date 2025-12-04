@@ -1,0 +1,444 @@
+import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'storage_selection_dialog.dart';
+import 'download_progress_screen.dart';
+
+// Theme Colors
+const Color primaryColor = Color(0xFFA64D79);
+const Color secondaryColor = Color(0xFF6A1E55);
+const Color darkPurple = Color(0xFF3B1C32);
+
+class PlatformContentScreen extends StatefulWidget {
+  final String platformName;
+  final String platformId;
+  final Color platformColor;
+  final IconData platformIcon;
+
+  const PlatformContentScreen({
+    super.key,
+    required this.platformName,
+    required this.platformId,
+    required this.platformColor,
+    required this.platformIcon,
+  });
+
+  @override
+  State<PlatformContentScreen> createState() => _PlatformContentScreenState();
+}
+
+class _PlatformContentScreenState extends State<PlatformContentScreen> {
+  String? _selectedContentId;
+  bool _isContentSelected = false;
+
+  // Sample content items - in real app, this would come from API
+  final List<Map<String, dynamic>> _contentItems = [
+    {
+      'id': '1',
+      'title': 'Amazing Dance Video',
+      'thumbnail': '🎬',
+      'duration': '2:34',
+      'views': '1.2M',
+    },
+    {
+      'id': '2',
+      'title': 'Cooking Tutorial',
+      'thumbnail': '👨‍🍳',
+      'duration': '5:12',
+      'views': '856K',
+    },
+    {
+      'id': '3',
+      'title': 'Travel Vlog',
+      'thumbnail': '✈️',
+      'duration': '8:45',
+      'views': '2.1M',
+    },
+    {
+      'id': '4',
+      'title': 'Music Video',
+      'thumbnail': '🎵',
+      'duration': '3:20',
+      'views': '3.5M',
+    },
+    {
+      'id': '5',
+      'title': 'Gaming Highlights',
+      'thumbnail': '🎮',
+      'duration': '10:15',
+      'views': '1.8M',
+    },
+    {
+      'id': '6',
+      'title': 'Fitness Workout',
+      'thumbnail': '💪',
+      'duration': '15:30',
+      'views': '945K',
+    },
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Column(
+              children: [
+                // Header
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        darkPurple,
+                        secondaryColor,
+                        primaryColor,
+                      ],
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(30),
+                      bottomRight: Radius.circular(30),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: darkPurple.withOpacity(0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.arrow_back, color: Colors.white),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                Navigator.popUntil(context, (route) => route.isFirst);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.3),
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.home, color: Colors.white, size: 18),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      'TapMate',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.15),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.3),
+                                width: 2,
+                              ),
+                            ),
+                            child: FaIcon(
+                              widget.platformIcon,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 15),
+                      Text(
+                        widget.platformName,
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Browse and download content',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white.withOpacity(0.9),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Content List
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Trending Now',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: darkPurple,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 15,
+                            mainAxisSpacing: 15,
+                            childAspectRatio: 0.75,
+                          ),
+                          itemCount: _contentItems.length,
+                          itemBuilder: (context, index) {
+                            final item = _contentItems[index];
+                            final isSelected = _selectedContentId == item['id'];
+                            return GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedContentId = item['id'];
+                                  _isContentSelected = true;
+                                });
+                              },
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? primaryColor
+                                        : darkPurple.withOpacity(0.1),
+                                    width: isSelected ? 2.5 : 1,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: isSelected
+                                          ? primaryColor.withOpacity(0.2)
+                                          : Colors.grey.withOpacity(0.1),
+                                      blurRadius: isSelected ? 10 : 5,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Thumbnail
+                                    Expanded(
+                                      child: Container(
+                                        width: double.infinity,
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: [
+                                              widget.platformColor.withOpacity(0.3),
+                                              widget.platformColor.withOpacity(0.1),
+                                            ],
+                                          ),
+                                          borderRadius: const BorderRadius.only(
+                                            topLeft: Radius.circular(16),
+                                            topRight: Radius.circular(16),
+                                          ),
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            item['thumbnail'] as String,
+                                            style: const TextStyle(fontSize: 50),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    // Content Info
+                                    Padding(
+                                      padding: const EdgeInsets.all(12),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            item['title'] as String,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color: isSelected
+                                                  ? primaryColor
+                                                  : darkPurple,
+                                            ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                item['duration'] as String,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey[600],
+                                                ),
+                                              ),
+                                              Text(
+                                                item['views'] as String,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey[600],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          if (isSelected) ...[
+                                            const SizedBox(height: 8),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                  horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: primaryColor.withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: const Text(
+                                                'Selected',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  color: primaryColor,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 100),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Floating Action Button
+          if (_isContentSelected)
+            Positioned(
+              right: 20,
+              bottom: 20,
+              child: FloatingActionButton.extended(
+                onPressed: () {
+                  _showStorageSelectionDialog();
+                },
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                elevation: 8,
+                icon: const Icon(Icons.download_rounded, size: 24),
+                label: const Text(
+                  'Download',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showStorageSelectionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => StorageSelectionDialog(
+        platformName: widget.platformName,
+        contentId: _selectedContentId ?? '',
+        onDeviceStorageSelected: (path) {
+          Navigator.pop(context);
+          _handleDeviceStorageDownload(path);
+        },
+        onAppStorageSelected: () {
+          Navigator.pop(context);
+          _handleAppStorageDownload();
+        },
+      ),
+    );
+  }
+
+  void _handleDeviceStorageDownload(String? path) {
+    if (path != null && path.isNotEmpty) {
+      final selectedContent = _contentItems.firstWhere(
+        (item) => item['id'] == _selectedContentId,
+        orElse: () => _contentItems[0],
+      );
+      
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => DownloadProgressScreen(
+            platformName: widget.platformName,
+            contentTitle: selectedContent['title'] as String,
+            storagePath: path,
+            isDeviceStorage: true,
+          ),
+        ),
+      );
+    }
+  }
+
+  void _handleAppStorageDownload() {
+    final selectedContent = _contentItems.firstWhere(
+      (item) => item['id'] == _selectedContentId,
+      orElse: () => _contentItems[0],
+    );
+    
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DownloadProgressScreen(
+          platformName: widget.platformName,
+          contentTitle: selectedContent['title'] as String,
+          isDeviceStorage: false,
+        ),
+      ),
+    );
+  }
+}
+
+

@@ -2,6 +2,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.tapmatefyp">
 
+    <!-- Storage Permissions -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" 
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    
+    <!-- Internet Permission -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:label="tapmatefyp"
         android:icon="@mipmap/ic_launcher">

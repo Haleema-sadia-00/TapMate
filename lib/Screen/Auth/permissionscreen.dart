@@ -1,6 +1,5 @@
-// dart
 import 'package:flutter/material.dart';
-import '../home/home_screen.dart';
+import 'package:tapmate/Screen/home/home_screen.dart';
 
 class PermissionScreen extends StatefulWidget {
   const PermissionScreen({super.key});
@@ -38,7 +37,7 @@ class _PermissionScreenState extends State<PermissionScreen> {
   void _navigateToHome() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const HomeScreen()),
+      MaterialPageRoute(builder: (_) => HomeScreen()),
     );
   }
 
@@ -69,7 +68,7 @@ class _PermissionScreenState extends State<PermissionScreen> {
                           ),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Icon(Icons.shield_outlined, color: Colors.white, size: 55),
+                        child: const Icon(Icons.download_rounded, color: Colors.white, size: 55),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -89,12 +88,12 @@ class _PermissionScreenState extends State<PermissionScreen> {
                     ),
                     const SizedBox(height: 35),
 
-                    // PERMISSION TILES
+                    // Permission Tiles
                     _permissionTile(
                       icon: Icons.visibility,
                       title: "Overlay Permission",
                       subtitle: overlayPermission ? "Granted" : "Display floating button on other apps",
-                      gradientColors: [Colors.blueAccent, Colors.lightBlueAccent],
+                      gradientColors: [Color(0xFFA64D79), Color(0xFF6A1E55)],
                       granted: overlayPermission,
                       onGrant: () => _grantPermission("Overlay"),
                     ),
@@ -102,7 +101,7 @@ class _PermissionScreenState extends State<PermissionScreen> {
                       icon: Icons.check_circle,
                       title: "Accessibility Service",
                       subtitle: accessibilityPermission ? "Granted" : "Detect video links automatically",
-                      gradientColors: [Colors.purple, Colors.purpleAccent],
+                      gradientColors: [Color(0xFFA64D79), Color(0xFF6A1E55)],
                       granted: accessibilityPermission,
                       onGrant: () => _grantPermission("Accessibility"),
                     ),
@@ -110,7 +109,7 @@ class _PermissionScreenState extends State<PermissionScreen> {
                       icon: Icons.folder,
                       title: "Storage Access",
                       subtitle: storagePermission ? "Granted" : "Save videos to your device",
-                      gradientColors: [Colors.green, Colors.lightGreen],
+                      gradientColors: [Color(0xFFA64D79), Color(0xFF6A1E55)],
                       granted: storagePermission,
                       onGrant: () => _grantPermission("Storage"),
                     ),
@@ -118,7 +117,7 @@ class _PermissionScreenState extends State<PermissionScreen> {
                       icon: Icons.notifications,
                       title: "Notifications",
                       subtitle: notificationsPermission ? "Granted" : "Alert you when downloads complete",
-                      gradientColors: [Colors.orange, Colors.deepOrangeAccent],
+                      gradientColors: [Color(0xFFA64D79), Color(0xFF6A1E55)],
                       granted: notificationsPermission,
                       onGrant: () => _grantPermission("Notifications"),
                     ),
@@ -127,7 +126,7 @@ class _PermissionScreenState extends State<PermissionScreen> {
               ),
             ),
 
-            // Continue + Skip buttons
+            // Bottom Buttons
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
               child: Column(
@@ -137,10 +136,15 @@ class _PermissionScreenState extends State<PermissionScreen> {
                     height: 50,
                     child: TextButton(
                       onPressed: _navigateToHome,
-                      style: TextButton.styleFrom(padding: EdgeInsets.zero, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
                       child: Ink(
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(colors: [Color(0xFF6A1E55), Color(0xFFA64D79)]),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFA64D79), Color(0xFF6A1E55)],
+                          ),
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: const Center(
@@ -170,6 +174,7 @@ class _PermissionScreenState extends State<PermissionScreen> {
     );
   }
 
+  // 🔥 CLEAN WHITE ICON BOX TILE
   Widget _permissionTile({
     required IconData icon,
     required String title,
@@ -179,59 +184,84 @@ class _PermissionScreenState extends State<PermissionScreen> {
     required VoidCallback onGrant,
   }) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: granted ? Colors.green[50] : const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: const Offset(0, 2))],
-      ),
-      child: Row(
-        children: [
-          // Gradient Icon Container
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: gradientColors),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: Colors.white, size: 26),
-          ),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: granted ? Colors.green : Colors.black)),
-                const SizedBox(height: 4),
-                Text(subtitle, style: TextStyle(fontSize: 13, color: granted ? Colors.green[700] : Colors.black54)),
-              ],
-            ),
-          ),
-          // Gradient Grant Button
-          SizedBox(
-            height: 40,
-            child: ElevatedButton(
-              onPressed: granted ? null : onGrant,
-              style: ElevatedButton.styleFrom(
-                padding: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-              ),
-              child: Ink(
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: granted ? const Color(0xFFF2E5EE) : const Color(0xFFF5F5F5), // light pink-purple if granted
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(color: Colors.black12, blurRadius: 4, offset: const Offset(0, 2)),
+          ],
+        ),
+        child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: granted ? [Colors.green, Colors.greenAccent] : gradientColors),
-                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.white, // WHITE BOX
+                  borderRadius: BorderRadius.circular(5),
+                  border: Border.all(color: Colors.black12),
                 ),
-                child: Center(
-                  child: Text(granted ? "Granted" : "Grant", style: const TextStyle(color: Colors.white)),
+                child: Icon(
+                  icon,
+                  size: 26,
+                  color: granted ? const Color(0xFFA64D79) : Colors.black87, // pink-purple for granted
                 ),
               ),
-            ),
-          )
-        ],
-      ),
-    );
-  }
+              const SizedBox(width: 15),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: granted ? const Color(0xFFA64D79) : Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: granted ? const Color(0xFF6A1E55) : Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // BUTTON (BIGGER & PINK-PURPLE)
+              SizedBox(
+                height: 50,
+                width: 120,
+                child: ElevatedButton(
+                  onPressed: granted ? null : onGrant,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                  ),
+                  child: Ink(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFA64D79), Color(0xFF6A1E55)],
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Center(
+                      child: Text(
+                        granted ? "Granted" : "Grant",
+                        style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+        ),
+        );}
 }

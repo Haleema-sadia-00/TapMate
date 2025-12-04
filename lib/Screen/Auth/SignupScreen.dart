@@ -1,6 +1,5 @@
-// dart
 import 'package:flutter/material.dart';
-import 'permissionscreen.dart';
+import 'package:tapmate/Screen/Auth/permissionscreen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -20,17 +19,15 @@ class _SignupScreenState extends State<SignupScreen> {
   String? _passwordError;
   String? _recoveryEmailError;
 
+  bool _obscurePassword = true;
+
   bool _isValidEmail(String email) {
     return RegExp(r"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$").hasMatch(email);
   }
 
   void _validateInputs() {
     setState(() {
-      if (_nameController.text.trim().isEmpty) {
-        _nameError = "Full Name is required";
-      } else {
-        _nameError = null;
-      }
+      _nameError = _nameController.text.trim().isEmpty ? "Full Name is required" : null;
 
       if (_emailController.text.trim().isEmpty) {
         _emailError = "Email is required";
@@ -70,7 +67,6 @@ class _SignupScreenState extends State<SignupScreen> {
             children: [
               const SizedBox(height: 30),
 
-              // Back Button
               Row(
                 children: [
                   IconButton(
@@ -82,17 +78,13 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: 10),
 
-              // Gradient Logo
               Container(
                 width: 70,
                 height: 70,
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
-                    colors: [
-                      Color(0xFFA64D79),
-                      Color(0xFF6A1E55),
-                    ],
+                    colors: [Color(0xFFA64D79), Color(0xFF6A1E55)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -115,147 +107,86 @@ class _SignupScreenState extends State<SignupScreen> {
               const SizedBox(height: 5),
               const Text(
                 "Sign up to get started",
-                style: TextStyle(
-                  color: Colors.black54,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold),
               ),
 
               const SizedBox(height: 25),
 
-              // Full Name
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: _nameController,
-                    onChanged: (_) => _validateInputs(),
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.person_outline, color: Colors.black54),
-                      hintText: "Full Name",
-                      filled: true,
-                      fillColor: const Color(0xFFF0F0F0),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                  if (_nameError != null)
-                    Text(
-                      _nameError!,
-                      style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                    ),
-                ],
+              _inputField(
+                controller: _nameController,
+                icon: Icons.person_outline,
+                hint: "Full Name",
+                error: _nameError,
+                onChange: _validateInputs,
               ),
 
               const SizedBox(height: 15),
 
-              // Email
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: _emailController,
-                    onChanged: (_) => _validateInputs(),
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.email_outlined, color: Colors.black54),
-                      hintText: "Email Address",
-                      filled: true,
-                      fillColor: const Color(0xFFF0F0F0),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                  if (_emailError != null)
-                    Text(
-                      _emailError!,
-                      style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                    ),
-                ],
+              _inputField(
+                controller: _emailController,
+                icon: Icons.email_outlined,
+                hint: "Email Address",
+                error: _emailError,
+                onChange: _validateInputs,
               ),
 
               const SizedBox(height: 15),
 
-              // Password
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   TextField(
                     controller: _passwordController,
-                    obscureText: true,
+                    obscureText: _obscurePassword,
                     onChanged: (_) => _validateInputs(),
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.lock_outline, color: Colors.black54),
                       hintText: "Password",
                       filled: true,
                       fillColor: const Color(0xFFF0F0F0),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                          color: Colors.black54,
+                        ),
+                        onPressed: () {
+                          setState(() => _obscurePassword = !_obscurePassword);
+                        },
                       ),
                     ),
                   ),
                   if (_passwordError != null)
-                    Text(
-                      _passwordError!,
-                      style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                    ),
+                    Text(_passwordError!, style: const TextStyle(color: Colors.red)),
                 ],
               ),
 
               const SizedBox(height: 15),
 
-              // Recovery Email
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: _recoveryEmailController,
-                    onChanged: (_) => _validateInputs(),
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.email, color: Colors.black54),
-                      hintText: "Recovery Email (Optional)",
-                      filled: true,
-                      fillColor: const Color(0xFFF0F0F0),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                  if (_recoveryEmailError != null)
-                    Text(
-                      _recoveryEmailError!,
-                      style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                    ),
-                ],
+              _inputField(
+                controller: _recoveryEmailController,
+                icon: Icons.email,
+                hint: "Recovery Email (Optional)",
+                error: _recoveryEmailError,
+                onChange: _validateInputs,
               ),
 
               const SizedBox(height: 20),
 
-              // Create Account Button with gradient
               SizedBox(
                 width: double.infinity,
                 height: 55,
                 child: TextButton(
                   onPressed: () {
                     _validateInputs();
-
-                    if (_nameError == null &&
-                        _emailError == null &&
-                        _passwordError == null &&
-                        _recoveryEmailError == null) {
+                    if (_nameError == null && _emailError == null && _passwordError == null) {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (context) => PermissionScreen()),
+                        MaterialPageRoute(builder: (context) => const PermissionScreen()),
                       );
                     }
                   },
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
+                  style: TextButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                   child: Ink(
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
@@ -266,13 +197,8 @@ class _SignupScreenState extends State<SignupScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Center(
-                      child: Text(
-                        "Create Account",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
+                      child: Text("Create Account",
+                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
@@ -281,15 +207,13 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: 15),
 
-              // Sign In Redirect
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text("Already have an account? ", style: TextStyle(fontWeight: FontWeight.bold)),
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
-                    child: const Text(
-                      "Sign In",
+                    child: const Text("Sign In",
                       style: TextStyle(color: Color(0xFFA64D79), fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -298,27 +222,33 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: 20),
 
-              // Social Buttons (PNG logos)
+              // ✅ SOCIAL BUTTONS WITH SNACKBAR
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _socialButtonImage("Google", 'assets/icons/google_logo.png', () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Google button tapped"),
-                        duration: Duration(seconds: 1),
-                      ),
-                    );
-                  }),
+                  GestureDetector(
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Google button tapped"),
+                          duration: Duration(seconds: 1),
+                        ),
+                      );
+                    },
+                    child: _socialButtonImage("Google", 'assets/icons/google_logo.png'),
+                  ),
                   const SizedBox(width: 20),
-                  _socialButtonImage("Facebook", 'assets/icons/facebook_logo.png', () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Facebook button tapped"),
-                        duration: Duration(seconds: 1),
-                      ),
-                    );
-                  }),
+                  GestureDetector(
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Facebook button tapped"),
+                          duration: Duration(seconds: 1),
+                        ),
+                      );
+                    },
+                    child: _socialButtonImage("Facebook", 'assets/icons/facebook_logo.png'),
+                  ),
                 ],
               ),
 
@@ -330,11 +260,35 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // Social button using PNG image
-  Widget _socialButtonImage(String title, String assetPath, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
+  Widget _inputField({
+    required TextEditingController controller,
+    required IconData icon,
+    required String hint,
+    String? error,
+    required Function onChange,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: controller,
+          onChanged: (_) => onChange(),
+          decoration: InputDecoration(
+            prefixIcon: Icon(icon, color: Colors.black54),
+            hintText: hint,
+            filled: true,
+            fillColor: const Color(0xFFF0F0F0),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        if (error != null)
+          Text(error, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  Widget _socialButtonImage(String title, String assetPath) {
+    return Container(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
@@ -342,13 +296,12 @@ class _SignupScreenState extends State<SignupScreen> {
           color: const Color(0xFFF0F0F0),
         ),
         child: Row(
-          children: [
-            Image.asset(assetPath, width: 24, height: 24),
-            const SizedBox(width: 5),
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-          ],
-        ),
-      ),
-    );
-  }
+            children: [
+              Image.asset(assetPath, width: 24, height: 24),
+              const SizedBox(width: 5),
+              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            ],
+            ),
+        );
+    }
 }
