@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:tapmate/Screen/Auth/splashscreen.dart'; // ✅ IMPORT SPLASH SCREEN
 import 'package:tapmate/Screen/home/chat_screen.dart';
 import 'package:tapmate/Screen/home/home_screen.dart';
 import 'package:tapmate/Screen/home/search_screen.dart';
@@ -28,6 +29,8 @@ class MyApp extends StatelessWidget {
       builder: (context, themeProvider, _) {
         return MaterialApp(
           title: 'TapMate',
+
+          // THEME SETTINGS
           theme: ThemeData(
             primaryColor: const Color(0xFFA64D79),
             colorScheme: ColorScheme.fromSeed(
@@ -51,7 +54,11 @@ class MyApp extends StatelessWidget {
             useMaterial3: true,
           ),
           themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-          initialRoute: '/home',
+
+          // ✅ SPLASH SCREEN KO HOME BANAYA
+          home: const SplashScreen(),
+
+          // ROUTES FOR NAVIGATION
           routes: {
             '/home': (context) => const HomeScreen(),
             '/chat': (context) => const ChatScreen(),
@@ -62,6 +69,7 @@ class MyApp extends StatelessWidget {
             '/profile': (context) => const UserProfileScreen(),
             '/settings': (context) => const SettingsScreen(),
           },
+
           debugShowCheckedModeBanner: false,
         );
       },
