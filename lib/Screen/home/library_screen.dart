@@ -1,4 +1,8 @@
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../auth_provider.dart';
+import '../Auth/LoginScreen.dart';
 
 // Theme Colors
 const Color primaryColor = Color(0xFFA64D79);
@@ -64,6 +68,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    final isGuest = authProvider.isGuest;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -120,7 +127,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    '${_downloads.length} downloaded items',
+                    isGuest ? 'Sign up to access your library' : '${_downloads.length} downloaded items',
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.9),
                       fontSize: 14,
@@ -153,44 +160,128 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
             // Downloads List
             Expanded(
-              child: _filteredDownloads.isEmpty
+              child: isGuest
                   ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                child: Padding(
+                  padding: const EdgeInsets.all(40),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Stack(
                         children: [
                           Icon(
                             Icons.video_library_outlined,
-                            size: 80,
+                            size: 100,
                             color: Colors.grey[300],
                           ),
-                          const SizedBox(height: 20),
-                          Text(
-                            'No downloads found',
-                            style: TextStyle(
-                              fontSize: 18,
-                              color: Colors.grey[600],
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Download content to see it here',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[500],
+                          Positioned(
+                            right: 0,
+                            top: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: const BoxDecoration(
+                                color: primaryColor,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.lock,
+                                size: 24,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(20),
-                      itemCount: _filteredDownloads.length,
-                      itemBuilder: (context, index) {
-                        final item = _filteredDownloads[index];
-                        return _buildDownloadItem(item);
-                      },
+                      const SizedBox(height: 30),
+                      Text(
+                        'Library Locked',
+                        style: TextStyle(
+                          fontSize: 24,
+                          color: darkPurple,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'This feature requires an account. Sign up to unlock all features and build your video library!',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const LoginScreen(),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 32,
+                            vertical: 16,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Sign Up to Unlock',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+                  : _filteredDownloads.isEmpty
+                  ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.video_library_outlined,
+                      size: 80,
+                      color: Colors.grey[300],
                     ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'No downloads found',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Download content to see it here',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ),
+              )
+                  : ListView.builder(
+                padding: const EdgeInsets.all(20),
+                itemCount: _filteredDownloads.length,
+                itemBuilder: (context, index) {
+                  final item = _filteredDownloads[index];
+                  return _buildDownloadItem(item);
+                },
+              ),
             ),
           ],
         ),
@@ -356,5 +447,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 }
+
+
 
 

@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tapmate/theme_provider.dart';
+import 'package:tapmate/utils/guide_manager.dart';
+import 'package:tapmate/auth_provider.dart';
+import 'package:tapmate/Screen/home/home_screen.dart';
+import 'package:tapmate/Screen/Auth/LoginScreen.dart'; // IMPORT ADDED
+import 'package:showcaseview/showcaseview.dart';
 
 // Theme Colors
 const Color primaryColor = Color(0xFFA64D79);
@@ -28,7 +33,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
-    
+
     // Sync local state with provider
     if (_darkMode != isDarkMode) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -39,7 +44,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         }
       });
     }
-    
+
     return Scaffold(
       backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.white,
       body: SafeArea(
@@ -205,20 +210,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         subtitle: 'Switch to dark theme',
                         value: _darkMode,
                         isDarkMode: isDarkMode,
-                          onChanged: (value) {
-                            setState(() {
-                              _darkMode = value;
-                            });
-                            // Apply dark mode immediately using Provider
-                            Provider.of<ThemeProvider>(context, listen: false).toggleDarkMode(value);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(value ? 'Dark mode enabled!' : 'Dark mode disabled!'),
-                                backgroundColor: primaryColor,
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                          },
+                        onChanged: (value) {
+                          setState(() {
+                            _darkMode = value;
+                          });
+                          // Apply dark mode immediately using Provider
+                          Provider.of<ThemeProvider>(context, listen: false).toggleDarkMode(value);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(value ? 'Dark mode enabled!' : 'Dark mode disabled!'),
+                              backgroundColor: primaryColor,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        },
                       ),
                       const Divider(),
                       _buildSwitchTile(
@@ -267,6 +272,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         isDarkMode: isDarkMode,
                         onTap: () {
                           _showClearCacheDialog(isDarkMode);
+                        },
+                      ),
+                    ]),
+
+                    const SizedBox(height: 30),
+
+                    // App Tour
+                    _buildSectionTitle('App Tour', isDarkMode),
+                    _buildSettingsCard(isDarkMode: isDarkMode, children: [
+                      _buildSettingsTile(
+                        icon: Icons.tour_outlined,
+                        title: 'Take Tour Again',
+                        subtitle: 'Restart the guided onboarding tour',
+                        isDarkMode: isDarkMode,
+                        onTap: () {
+                          _showRestartTourDialog(isDarkMode);
                         },
                       ),
                     ]),
@@ -352,15 +373,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildSectionTitle(String title, bool isDarkMode) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12, left: 4),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: isDarkMode ? Colors.white : darkPurple,
+        padding: const EdgeInsets.only(bottom: 12, left: 4),
+        child: Text(
+          title,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: isDarkMode ? Colors.white : darkPurple,
+          ),
         ),
-      ),
     );
   }
 
@@ -895,11 +916,105 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           ElevatedButton(
             onPressed: () {
+              // Close dialog
               Navigator.pop(context);
-              Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+
+              // Get auth provider and logout
+              final authProvider = Provider.of<AuthProvider>(context, listen: false);
+              authProvider.logout();
+
+              // Navigate directly to LoginScreen
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    (route) => false,
+              );
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Log Out', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // settings_screen.dart میں یہ method شامل کریں
+  void _showRestartTourDialog(bool isDarkMode) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.tour_outlined, color: primaryColor, size: 28),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Take Tour Again',
+                style: TextStyle(
+                  color: isDarkMode ? Colors.white : darkPurple,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Roboto',
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'This will restart the guided onboarding tour. You\'ll see highlights for all key features of TapMate.',
+          style: TextStyle(
+            color: isDarkMode ? Colors.grey[300] : darkPurple,
+            fontSize: 15,
+            fontFamily: 'Roboto',
+            height: 1.5,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                fontFamily: 'Roboto',
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              // Reset guide completion
+              await GuideManager.resetGuide();
+
+              // Navigate to home screen if not already there
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              }
+
+              // Wait a bit for navigation
+              await Future.delayed(const Duration(milliseconds: 300));
+
+              // Start the tour by navigating to home (it will auto-start)
+              if (context.mounted) {
+                Navigator.pushReplacementNamed(context, '/home');
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text(
+              'Start Tour',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Roboto',
+              ),
+            ),
           ),
         ],
       ),

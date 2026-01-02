@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:tapmate/Screen/Auth/LoginScreen.dart'; // IMPORT ADDED
+import '../../auth_provider.dart';
 
 // Theme Colors
 const Color primaryColor = Color(0xFFA64D79);
@@ -40,6 +43,68 @@ class _UserProfileScreenState extends State<UserProfileScreen> with SingleTicker
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    final isGuest = authProvider.isGuest;
+
+    if (isGuest) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.person_off_outlined,
+                    size: 80,
+                    color: Color(0xFFA64D79),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Sign In Required',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: darkPurple,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Please sign in to access your profile and view your posts.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pushReplacementNamed(context, '/home');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
+                    ),
+                    child: const Text(
+                      'Go to Home',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -155,7 +220,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with SingleTicker
                                   color: darkPurple,
                                 ),
                               ),
-                              SizedBox(height: 6),
+                              const SizedBox(height: 6),
                               Text(
                                 'Content Creator | Video Enthusiast\n📍 New York, USA\n📧 yourname@email.com',
                                 style: TextStyle(
@@ -527,9 +592,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> with SingleTicker
                 title: Text('User ${index + 1}'),
                 trailing: type == 'Followers' && index < 3
                     ? OutlinedButton(
-                        onPressed: () {},
-                        child: const Text('Follow'),
-                      )
+                  onPressed: () {},
+                  child: const Text('Follow'),
+                )
                     : null,
               );
             },
@@ -759,8 +824,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> with SingleTicker
           ),
           ElevatedButton(
             onPressed: () {
+              // Close dialog
               Navigator.pop(context);
-              Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+
+              // Get auth provider and logout
+              final authProvider = Provider.of<AuthProvider>(context, listen: false);
+              authProvider.logout();
+
+              // Navigate directly to LoginScreen
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    (route) => false,
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
@@ -772,4 +848,3 @@ class _UserProfileScreenState extends State<UserProfileScreen> with SingleTicker
     );
   }
 }
-

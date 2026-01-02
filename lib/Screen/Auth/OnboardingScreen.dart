@@ -1,7 +1,9 @@
 // dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'LoginScreen.dart';
 import '../home/home_screen.dart';
+import '../../auth_provider.dart';
 
 class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({super.key});
@@ -121,7 +123,10 @@ class OnboardingScreen extends StatelessWidget {
               // Continue as Guest
               GestureDetector(
                 onTap: () {
-                  Navigator.push(
+                  final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                  authProvider.setGuestMode(true);
+                  authProvider.setOnboardingCompleted(true);
+                  Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
                         builder: (context) => const HomeScreen()),

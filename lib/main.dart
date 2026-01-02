@@ -1,6 +1,7 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:tapmate/Screen/Auth/splashscreen.dart'; // ✅ IMPORT SPLASH SCREEN
+import 'package:tapmate/Screen/Auth/splashscreen.dart';
 import 'package:tapmate/Screen/home/chat_screen.dart';
 import 'package:tapmate/Screen/home/home_screen.dart';
 import 'package:tapmate/Screen/home/search_screen.dart';
@@ -10,11 +11,15 @@ import 'package:tapmate/Screen/home/feed_screen.dart';
 import 'package:tapmate/Screen/home/user_profile_screen.dart';
 import 'package:tapmate/Screen/home/settings_screen.dart';
 import 'package:tapmate/theme_provider.dart';
+import 'package:tapmate/auth_provider.dart';
 
 void main() {
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+      ],
       child: const MyApp(),
     ),
   );
@@ -30,7 +35,7 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           title: 'TapMate',
 
-          // THEME SETTINGS
+          // ✅ LIGHT THEME
           theme: ThemeData(
             primaryColor: const Color(0xFFA64D79),
             colorScheme: ColorScheme.fromSeed(
@@ -41,7 +46,33 @@ class MyApp extends StatelessWidget {
             ),
             scaffoldBackgroundColor: Colors.white,
             useMaterial3: true,
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Colors.white,
+              foregroundColor: Color(0xFFA64D79),
+              elevation: 1,
+            ),
+            elevatedButtonTheme: ElevatedButtonThemeData(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFA64D79),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+            textTheme: const TextTheme(
+              displayLarge: TextStyle(
+                color: Color(0xFFA64D79),
+                fontWeight: FontWeight.bold,
+              ),
+              bodyLarge: TextStyle(
+                color: Colors.black87,
+              ),
+            ),
           ),
+
+          // ✅ DARK THEME
           darkTheme: ThemeData(
             primaryColor: const Color(0xFFA64D79),
             colorScheme: ColorScheme.fromSeed(
@@ -52,13 +83,37 @@ class MyApp extends StatelessWidget {
             ),
             scaffoldBackgroundColor: const Color(0xFF121212),
             useMaterial3: true,
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Color(0xFF1E1E1E),
+              foregroundColor: Colors.white,
+              elevation: 1,
+            ),
+            elevatedButtonTheme: ElevatedButtonThemeData(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFA64D79),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+            textTheme: const TextTheme(
+              displayLarge: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+              bodyLarge: TextStyle(
+                color: Colors.white70,
+              ),
+            ),
           ),
+
+          // ✅ THEME MODE SET
           themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
 
-          // ✅ SPLASH SCREEN KO HOME BANAYA
           home: const SplashScreen(),
 
-          // ROUTES FOR NAVIGATION
           routes: {
             '/home': (context) => const HomeScreen(),
             '/chat': (context) => const ChatScreen(),

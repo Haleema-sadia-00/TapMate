@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart'; //
+import 'format_selection_dialog.dart';
+import 'dart:io';
 
 // Theme Colors
 const Color primaryColor = Color(0xFFA64D79);
@@ -9,13 +12,15 @@ const Color darkPurple = Color(0xFF3B1C32);
 class StorageSelectionDialog extends StatefulWidget {
   final String platformName;
   final String contentId;
-  final Function(String?) onDeviceStorageSelected;
-  final Function() onAppStorageSelected;
+  final String contentTitle;
+  final Function(String? path, String format, String quality) onDeviceStorageSelected;
+  final Function(String format, String quality) onAppStorageSelected;
 
   const StorageSelectionDialog({
     super.key,
     required this.platformName,
     required this.contentId,
+    required this.contentTitle,
     required this.onDeviceStorageSelected,
     required this.onAppStorageSelected,
   });
@@ -34,87 +39,135 @@ class _StorageSelectionDialogState extends State<StorageSelectionDialog> {
       _isSelectingPath = true;
     });
 
-    try {
-      // DIRECT APPROACH: Try directory picking first
-      String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
+    // ✅ FIXED: Changed to Map<String, dynamic>
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => FormatSelectionDialog(
+        contentTitle: widget.contentTitle,
+      ),
+    );
 
-      setState(() {
-        _isSelectingPath = false;
-      });
+    if (result != null && mounted) {
+      // ✅ FIXED: Safe access with null checks
+      final format = result['format']?.toString() ?? 'Video';
+      final quality = result['quality']?.toString() ?? '1080p';
 
-      if (selectedDirectory != null && selectedDirectory.isNotEmpty) {
-        widget.onDeviceStorageSelected(selectedDirectory);
-      } else {
-        // User cancelled directory selection, try file picking as fallback
-        await _selectFileAsFallback();
+      // Now select storage path
+      await _selectPathAfterFormat(format, quality);
+    } else {
+      if (mounted) {
+        setState(() {
+          _isSelectingPath = false;
+        });
       }
-    } catch (e) {
-      // If directory picker fails, try file picker as fallback
-      await _selectFileAsFallback();
     }
   }
 
-  Future<void> _selectFileAsFallback() async {
+  // ✅ UPDATED FUNCTION: FIXED VERSION
+  Future<void> _selectPathAfterFormat(String format, String quality) async {
     try {
+      // First try to use FilePicker to select a file (extract directory)
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.any,
         allowMultiple: false,
+        dialogTitle: 'Select a location to save your download',
       );
 
-      setState(() {
-        _isSelectingPath = false;
-      });
-
       if (result != null && result.files.single.path != null) {
-        // Get the directory from the file path
         String filePath = result.files.single.path!;
         String directory = filePath.substring(0, filePath.lastIndexOf('/'));
-        widget.onDeviceStorageSelected(directory);
+
+        // ✅ Close dialog and pass data
+        Navigator.pop(context); // Close storage dialog
+        widget.onDeviceStorageSelected(directory, format, quality);
       } else {
-        // User cancelled
+        // User cancelled - use default downloads directory
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Path selection cancelled'),
-              duration: Duration(seconds: 1),
-            ),
-          );
+          setState(() {
+            _isSelectingPath = false;
+          });
+
+          // Try to get downloads directory
+          try {
+            final Directory? downloadsDir = await getExternalStorageDirectory();
+            if (downloadsDir != null) {
+              Navigator.pop(context);
+              widget.onDeviceStorageSelected('${downloadsDir.path}/TapMate_Downloads', format, quality);
+            } else {
+              // Fallback to app directory
+              final Directory appDir = await getApplicationDocumentsDirectory();
+              Navigator.pop(context);
+              widget.onDeviceStorageSelected('${appDir.path}/Downloads', format, quality);
+            }
+          } catch (e) {
+            // Final fallback
+            Navigator.pop(context);
+            widget.onDeviceStorageSelected('/storage/emulated/0/Download/TapMate', format, quality);
+          }
         }
       }
     } catch (e) {
-      setState(() {
-        _isSelectingPath = false;
-      });
-
+      // Handle all errors gracefully
       if (mounted) {
-        // Show error dialog
-        showDialog(
+        setState(() {
+          _isSelectingPath = false;
+        });
+
+        // Show simple confirmation for default path
+        bool useDefault = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: const Row(
-              children: [
-                Icon(Icons.error_outline, color: Colors.red),
-                SizedBox(width: 10),
-                Text('Error'),
-              ],
-            ),
-            content: Text(
-              'Unable to access device storage.\n\n'
-                  'Error: ${e.toString()}\n\n'
-                  'Please ensure:\n'
-                  '• Storage permissions are granted\n'
-                  '• You\'re using a supported platform\n'
-                  '• Try using App Storage instead',
+            title: const Text('Download Location'),
+            content: const Text(
+              'Unable to select custom location.\n\n'
+                  'Use default download folder?\n'
+                  '/storage/emulated/0/Download/TapMate',
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Use Default'),
               ),
             ],
+          ),
+        ) ?? false;
+
+        if (useDefault) {
+          Navigator.pop(context);
+          widget.onDeviceStorageSelected('/storage/emulated/0/Download/TapMate', format, quality);
+        }
+      }
+    }
+  }
+
+  void _handleAppStorage() async {
+    // ✅ FIXED: Changed to Map<String, dynamic>
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => FormatSelectionDialog(
+        contentTitle: widget.contentTitle,
+      ),
+    );
+
+    if (result != null) {
+      // ✅ FIXED: Safe access with null checks
+      final format = result['format']?.toString() ?? 'Video';
+      final quality = result['quality']?.toString() ?? '1080p';
+
+      // ✅ Close BOTH dialogs and pass data
+      Navigator.pop(context); // Close storage dialog
+      widget.onAppStorageSelected(format, quality);
+    } else {
+      // User cancelled format selection
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Format selection cancelled'),
+            duration: Duration(seconds: 1),
           ),
         );
       }
@@ -125,7 +178,6 @@ class _StorageSelectionDialogState extends State<StorageSelectionDialog> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        // Prevent closing dialog while selecting path
         return !_isSelectingPath;
       },
       child: Dialog(
@@ -204,7 +256,7 @@ class _StorageSelectionDialogState extends State<StorageSelectionDialog> {
                 title: 'App Storage',
                 subtitle: 'Save to TapMate downloads folder',
                 color: secondaryColor,
-                onTap: widget.onAppStorageSelected,
+                onTap: _handleAppStorage,
                 isLoading: false,
               ),
 

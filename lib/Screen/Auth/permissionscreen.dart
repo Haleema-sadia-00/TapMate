@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:tapmate/Screen/home/home_screen.dart';
+import '../../auth_provider.dart';
 
 class PermissionScreen extends StatefulWidget {
   const PermissionScreen({super.key});
@@ -35,9 +37,13 @@ class _PermissionScreenState extends State<PermissionScreen> {
   }
 
   void _navigateToHome() {
-    Navigator.push(
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    authProvider.setLoggedIn(true);
+    authProvider.setGuestMode(false);
+    authProvider.setOnboardingCompleted(true);
+    Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => HomeScreen()),
+      MaterialPageRoute(builder: (_) => const HomeScreen()),
     );
   }
 

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'SignupScreen.dart';
 import 'resetpasswordScreen.dart';
 import '../home/home_screen.dart';
+import '../../auth_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -130,6 +132,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: TextButton(
                     onPressed: () {
                       if (_formKey.currentState!.validate()) {
+                        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                        authProvider.setLoggedIn(true);
+                        authProvider.setGuestMode(false);
+                        authProvider.setOnboardingCompleted(true);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text("Login Successful")),
                         );
@@ -192,7 +198,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 // CONTINUE AS GUEST
                 GestureDetector(
                   onTap: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => HomeScreen()));
+                    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                    authProvider.setGuestMode(true);
+                    authProvider.setOnboardingCompleted(true);
+                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
                   },
                   child: const Text(
                     "Continue as Guest",

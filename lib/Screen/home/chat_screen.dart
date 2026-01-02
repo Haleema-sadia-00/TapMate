@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Clipboard ke liye
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import '../../auth_provider.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -103,6 +105,68 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    final isGuest = authProvider.isGuest;
+
+    if (isGuest) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.lock_outline,
+                    size: 80,
+                    color: Color(0xFFA64D79),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Sign In Required',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF6A1E55),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Please sign in to access messages and chat with other users.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pushReplacementNamed(context, '/home');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFA64D79),
+                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
+                    ),
+                    child: const Text(
+                      'Go to Home',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -152,15 +216,44 @@ class _ChatScreenState extends State<ChatScreen> {
                       },
                     ),
 
-                    if (currentChatName.isNotEmpty)
-                      CircleAvatar(
-                        backgroundColor: Colors.white,
-                        child: Icon(currentChatIcon, color: const Color(0xFF6A1E55)),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          if (currentChatName.isNotEmpty)
+                            CircleAvatar(
+                              backgroundColor: Colors.white,
+                              child: Icon(currentChatIcon, color: const Color(0xFF6A1E55)),
+                            ),
+                          if (currentChatName.isNotEmpty) const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              currentChatName.isEmpty ? "Chats" : currentChatName,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Roboto',
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    if (currentChatName.isNotEmpty) const SizedBox(width: 10),
-                    Text(
-                      currentChatName.isEmpty ? "Chats" : currentChatName,
-                      style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                    ),
+                    // Chat icon button
+                    IconButton(
+                      icon: const Icon(Icons.chat_bubble_outline, color: Colors.white),
+                      onPressed: () {
+                        // This is the chat screen, so maybe show a new chat dialog or info
+                        if (currentChatName.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Tap on a conversation to start chatting!'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      },
+                      tooltip: 'New Chat',
                     ),
                   ],
                 ),

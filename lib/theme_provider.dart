@@ -1,3 +1,4 @@
+// lib/theme_provider.dart
 import 'package:flutter/material.dart';
 
 class ThemeProvider extends ChangeNotifier {
@@ -9,6 +10,15 @@ class ThemeProvider extends ChangeNotifier {
     _isDarkMode = value;
     notifyListeners();
   }
+
+  void setDarkMode(bool value) {
+    _isDarkMode = value;
+    notifyListeners();
+  }
 }
+
+
+
+
 
 

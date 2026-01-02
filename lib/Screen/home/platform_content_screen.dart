@@ -30,7 +30,7 @@ class _PlatformContentScreenState extends State<PlatformContentScreen> {
   String? _selectedContentId;
   bool _isContentSelected = false;
 
-  // Sample content items - in real app, this would come from API
+  // Sample content items
   final List<Map<String, dynamic>> _contentItems = [
     {
       'id': '1',
@@ -76,6 +76,74 @@ class _PlatformContentScreenState extends State<PlatformContentScreen> {
     },
   ];
 
+  void _showStorageSelectionDialog() {
+    if (_selectedContentId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a content first'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final selectedContent = _contentItems.firstWhere(
+          (item) => item['id'] == _selectedContentId,
+      orElse: () => _contentItems[0],
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) => StorageSelectionDialog(
+        platformName: widget.platformName,
+        contentId: _selectedContentId!,
+        contentTitle: selectedContent['title'] as String,
+        onDeviceStorageSelected: (path, format, quality) {
+          Navigator.pop(context); // Storage dialog close
+          _handleDeviceStorageDownload(path, format, quality, selectedContent);
+        },
+        onAppStorageSelected: (format, quality) {
+          Navigator.pop(context); // Storage dialog close
+          _handleAppStorageDownload(format, quality, selectedContent);
+        },
+      ),
+    );
+  }
+
+
+  void _handleDeviceStorageDownload(String? path, String format, String quality, Map<String, dynamic> content) {
+    if (path != null && path.isNotEmpty) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => DownloadProgressScreen(
+            platformName: widget.platformName,
+            contentTitle: '${content['title']} ($format - $quality)',
+            storagePath: path,
+            isDeviceStorage: true,
+            fromPlatformScreen: true,
+            sourcePlatform: widget.platformId, // Make sure this is the actual platform ID (e.g., 'instagram', 'youtube')
+          ),
+        ),
+      );
+    }
+  }
+
+  void _handleAppStorageDownload(String format, String quality, Map<String, dynamic> content) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DownloadProgressScreen(
+          platformName: widget.platformName,
+          contentTitle: '${content['title']} ($format - $quality)',
+          storagePath: null,
+          isDeviceStorage: false,
+          fromPlatformScreen: true,
+          sourcePlatform: widget.platformId, // Make sure this is the actual platform ID
+        ),
+      ),
+    );
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -85,7 +153,7 @@ class _PlatformContentScreenState extends State<PlatformContentScreen> {
           SafeArea(
             child: Column(
               children: [
-                // Header
+                // Header - FIXED
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
@@ -116,14 +184,22 @@ class _PlatformContentScreenState extends State<PlatformContentScreen> {
                     children: [
                       Row(
                         children: [
+                          // Back Button - FIXED
                           IconButton(
                             icon: const Icon(Icons.arrow_back, color: Colors.white),
-                            onPressed: () => Navigator.pop(context),
+                            onPressed: () {
+                              Navigator.pop(context); // Simple pop
+                            },
                           ),
+                          // Home Button - FIXED
                           Expanded(
                             child: GestureDetector(
                               onTap: () {
-                                Navigator.popUntil(context, (route) => route.isFirst);
+                                Navigator.pushNamedAndRemoveUntil(
+                                  context,
+                                  '/home',
+                                      (route) => false,
+                                );
                               },
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -154,6 +230,7 @@ class _PlatformContentScreenState extends State<PlatformContentScreen> {
                             ),
                           ),
                           const SizedBox(width: 10),
+                          // Platform Icon
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
@@ -301,7 +378,7 @@ class _PlatformContentScreenState extends State<PlatformContentScreen> {
                                           const SizedBox(height: 6),
                                           Row(
                                             mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
+                                            MainAxisAlignment.spaceBetween,
                                             children: [
                                               Text(
                                                 item['duration'] as String,
@@ -362,9 +439,7 @@ class _PlatformContentScreenState extends State<PlatformContentScreen> {
               right: 20,
               bottom: 20,
               child: FloatingActionButton.extended(
-                onPressed: () {
-                  _showStorageSelectionDialog();
-                },
+                onPressed: _showStorageSelectionDialog,
                 backgroundColor: primaryColor,
                 foregroundColor: Colors.white,
                 elevation: 8,
@@ -382,63 +457,4 @@ class _PlatformContentScreenState extends State<PlatformContentScreen> {
       ),
     );
   }
-
-  void _showStorageSelectionDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => StorageSelectionDialog(
-        platformName: widget.platformName,
-        contentId: _selectedContentId ?? '',
-        onDeviceStorageSelected: (path) {
-          Navigator.pop(context);
-          _handleDeviceStorageDownload(path);
-        },
-        onAppStorageSelected: () {
-          Navigator.pop(context);
-          _handleAppStorageDownload();
-        },
-      ),
-    );
-  }
-
-  void _handleDeviceStorageDownload(String? path) {
-    if (path != null && path.isNotEmpty) {
-      final selectedContent = _contentItems.firstWhere(
-        (item) => item['id'] == _selectedContentId,
-        orElse: () => _contentItems[0],
-      );
-      
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => DownloadProgressScreen(
-            platformName: widget.platformName,
-            contentTitle: selectedContent['title'] as String,
-            storagePath: path,
-            isDeviceStorage: true,
-          ),
-        ),
-      );
-    }
-  }
-
-  void _handleAppStorageDownload() {
-    final selectedContent = _contentItems.firstWhere(
-      (item) => item['id'] == _selectedContentId,
-      orElse: () => _contentItems[0],
-    );
-    
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => DownloadProgressScreen(
-          platformName: widget.platformName,
-          contentTitle: selectedContent['title'] as String,
-          isDeviceStorage: false,
-        ),
-      ),
-    );
-  }
 }
-
-
