@@ -985,20 +985,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              // Reset guide completion
-              await GuideManager.resetGuide();
 
-              // Navigate to home screen if not already there
-              if (Navigator.canPop(context)) {
-                Navigator.pop(context);
+              final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+              // If guest, prompt to sign up instead of starting tour
+              if (authProvider.isGuest) {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    title: Row(
+                      children: [
+                        const Icon(Icons.lock_outline, color: primaryColor),
+                        const SizedBox(width: 10),
+                        Text('Guests cannot take the tour', style: TextStyle(color: isDarkMode ? Colors.white : darkPurple)),
+                      ],
+                    ),
+                    content: Text(
+                      'Create an account to see the full guided tour and learn how to use TapMate.',
+                      style: TextStyle(color: isDarkMode ? Colors.grey[300] : darkPurple),
+                    ),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Maybe Later')),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const LoginScreen()),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
+                        child: const Text('Sign Up', style: TextStyle(color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                );
+
+                return;
               }
 
-              // Wait a bit for navigation
-              await Future.delayed(const Duration(milliseconds: 300));
+              // Reset per-user guide flag
+              final userId = authProvider.userId;
+              await GuideManager.resetGuideForUser(userId);
 
-              // Start the tour by navigating to home (it will auto-start)
+              // Navigate to home and remove other routes so HomeScreen will start the tour
               if (context.mounted) {
-                Navigator.pushReplacementNamed(context, '/home');
+                Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
               }
             },
             style: ElevatedButton.styleFrom(
@@ -1021,3 +1055,4 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 }
+

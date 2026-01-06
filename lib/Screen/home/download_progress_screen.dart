@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:tapmate/Screen/home/feed_screen.dart';
+import 'package:tapmate/auth_provider.dart';
+import 'package:tapmate/utils/guide_manager.dart';
 import 'library_screen.dart';
 import 'platform_content_screen.dart';
 
@@ -88,6 +91,48 @@ class _DownloadProgressScreenState extends State<DownloadProgressScreen> {
 
       if (_status == DownloadStatus.downloading) {
         _simulateDownload();
+      } else if (_status == DownloadStatus.completed) {
+        // Show first-download celebration once per user
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if (!mounted) return;
+          final authProvider = Provider.of<AuthProvider>(context, listen: false);
+          final userId = authProvider.userId;
+
+          // Only for logged-in users
+          if (userId.isNotEmpty && userId != 'guest') {
+            final alreadyShown = await GuideManager.hasShownFirstDownload(userId);
+            if (!alreadyShown) {
+              // Mark as shown
+              await GuideManager.markFirstDownloadShown(userId);
+
+              // Show dialog
+              if (!mounted) return;
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Congratulations!'),
+                  content: const Text('You have downloaded your first video. Share it with the community or find more in the Library.'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Close'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const LibraryScreen()),
+                        );
+                      },
+                      child: const Text('Open Library'),
+                    ),
+                  ],
+                ),
+              );
+            }
+          }
+        });
       }
     });
   }
@@ -136,6 +181,12 @@ class _DownloadProgressScreenState extends State<DownloadProgressScreen> {
     print("Platform ID from source: ${widget.sourcePlatform}");
     print("Platform ID from name: ${_getPlatformId(widget.platformName)}");
     print("=============================");
+
+    if (widget.sourcePlatform == 'search') {
+      print("Navigating back to SearchDiscoverScreen");
+      Navigator.pushReplacementNamed(context, '/search');
+      return;
+    }
 
     // FIRST: Check if we're coming from Feed
     if (widget.sourcePlatform == 'feed') {
@@ -379,8 +430,12 @@ class _DownloadProgressScreenState extends State<DownloadProgressScreen> {
                             subtitle: 'Find more videos',
                             color: primaryColor,
                             onTap: () {
+                              if (widget.sourcePlatform == 'search') {
+                                // Go back to Search & Discovery screen
+                                Navigator.pushReplacementNamed(context, '/search');
+                              }
                               // Check where to navigate
-                              if (widget.sourcePlatform == 'feed') {
+                            else if (widget.sourcePlatform == 'feed') {
                                 // Go back to FeedScreen
                                 Navigator.pushAndRemoveUntil(
                                   context,
@@ -771,3 +826,4 @@ class _DownloadProgressScreenState extends State<DownloadProgressScreen> {
     );
   }
 }
+

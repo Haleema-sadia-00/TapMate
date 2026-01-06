@@ -1,12 +1,9 @@
-// lib/screens/HomeScreen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:showcaseview/showcaseview.dart';
+import 'package:tapmate/Screen/utils/guide_manager.dart';
 import 'platform_selection_screen.dart';
 import '../../auth_provider.dart';
 import '../../theme_provider.dart';
-import '../../utils/guide_manager.dart';
-import 'onboarding_guide.dart';
 
 // Theme Colors
 const Color primaryColor = Color(0xFFA64D79);
@@ -21,50 +18,427 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // GlobalKeys for showcase widgets
-  final GlobalKey _downloadCardKey = GlobalKey();
-  final GlobalKey _floatingButtonKey = GlobalKey();
-  final GlobalKey _profileIconKey = GlobalKey();
-  final GlobalKey _statsSectionKey = GlobalKey();
-  final GlobalKey _libraryButtonKey = GlobalKey();
-  final GlobalKey _settingsButtonKey = GlobalKey();
-  final GlobalKey _navigationBarKey = GlobalKey();
+  // Variables for tutorial
+  bool _showTutorial = false;
+  int _currentStep = 0;
 
-  late OnboardingGuideKeys _guideKeys;
+  List<Map<String, dynamic>> _tutorialSteps = [
+    {
+      'title': '👤 Profile Icon',
+      'message': 'Edit profile, see downloads & customize settings.',
+      'position': 'top-right'
+    },
+    {
+      'title': '📥 Download Dashboard',
+      'message': 'Check download readiness and status.',
+      'position': 'top-center'
+    },
+    {
+      'title': '⬇️ Download Button',
+      'message': 'Download videos from 10+ platforms.',
+      'position': 'bottom-right'
+    },
+    {
+      'title': '📊 Your Stats',
+      'message': 'Track downloads, storage & cloud uploads.',
+      'position': 'center'
+    },
+    {
+      'title': '📁 Video Library',
+      'message': 'Access & manage all downloaded videos.',
+      'position': 'center-left'
+    },
+    {
+      'title': '⚙️ Settings',
+      'message': 'Customize app preferences & dark mode.',
+      'position': 'center-right'
+    },
+    {
+      'title': '📍 Navigation',
+      'message': 'Switch between Home, Discover, Feed & Profile.',
+      'position': 'bottom-center'
+    },
+  ];
 
   @override
   void initState() {
     super.initState();
-    _guideKeys = OnboardingGuideKeys(
-      floatingButtonKey: _floatingButtonKey,
-      profileIconKey: _profileIconKey,
-      downloadCardKey: _downloadCardKey,
-      statsSectionKey: _statsSectionKey,
-      libraryButtonKey: _libraryButtonKey,
-      settingsButtonKey: _settingsButtonKey,
-      navigationBarKey: _navigationBarKey,
-    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkOnboardingStatus();
+      _checkAndShowTutorial();
     });
   }
 
-  Future<void> _checkOnboardingStatus() async {
-    final hasCompleted = await GuideManager.hasCompletedGuide();
+  Future<void> _checkAndShowTutorial() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    if (!hasCompleted && mounted) {
-      // Wait for UI to render
-      await Future.delayed(const Duration(milliseconds: 800));
-      if (mounted) {
-        final keys = _guideKeys.getAllKeys().where((key) => key != null).cast<GlobalKey>().toList();
-        if (keys.isNotEmpty) {
-          ShowCaseWidget.of(context).startShowCase(keys);
-          // Mark as completed after showing
-          await GuideManager.completeGuide();
-        }
-      }
+    if (authProvider.isGuest) {
+      print('Guest user - No tutorial shown');
+      return;
     }
+
+    final userId = authProvider.userId;
+
+    // Check if user has seen tutorial
+    final hasUserCompleted = await GuideManager.hasUserCompletedGuide(userId);
+
+    if (hasUserCompleted) {
+      print('User has already seen tutorial - Skipping');
+      return;
+    }
+
+    print('First-time user - Showing tutorial');
+
+    // Wait for UI to render
+    await Future.delayed(const Duration(milliseconds: 1500));
+
+    if (!mounted) return;
+
+    setState(() {
+      _showTutorial = true;
+      _currentStep = 0;
+    });
+  }
+
+  void _nextTutorialStep() {
+    setState(() {
+      if (_currentStep < _tutorialSteps.length - 1) {
+        _currentStep++;
+      } else {
+        // Tutorial completed
+        _showTutorial = false;
+        _markTutorialCompleted();
+      }
+    });
+  }
+
+  void _skipTutorial() {
+    setState(() {
+      _showTutorial = false;
+    });
+    _markTutorialCompleted();
+  }
+
+  Future<void> _markTutorialCompleted() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userId = authProvider.userId;
+
+    if (userId.isNotEmpty && userId != 'guest') {
+      await GuideManager.completeGuideForUser(userId);
+      print('Tutorial marked as completed for user: $userId');
+    }
+  }
+
+  Widget _buildTutorialDialog() {
+    if (!_showTutorial) return const SizedBox.shrink();
+
+    final currentStep = _tutorialSteps[_currentStep];
+    final position = currentStep['position'] as String;
+
+    double top = 100;
+    double left = 20;
+    String arrowPosition = 'bottom';
+    double arrowOffset = 20;
+
+    switch (position) {
+      case 'top-right': // Profile icon ke liye - arrow BOTTOM se (same)
+        top = 80;
+        left = MediaQuery.of(context).size.width - 240;
+        arrowPosition = 'bottom';
+        arrowOffset = 30;
+        break;
+      case 'top-center': // Download dashboard ke liye - arrow BOTTOM se (same)
+        top = 150;
+        left = MediaQuery.of(context).size.width / 2 - 110;
+        arrowPosition = 'bottom';
+        arrowOffset = 110;
+        break;
+      case 'bottom-right': // Floating button ke liye - arrow LEFT se (CHANGED)
+        top = MediaQuery.of(context).size.height - 180;
+        left = MediaQuery.of(context).size.width - 240;
+        arrowPosition = 'left'; // ✅ YAHAN CHANGE: top -> left
+        arrowOffset = 50;
+        break;
+      case 'center': // Stats ke liye - arrow BOTTOM se (same)
+        top = MediaQuery.of(context).size.height / 2 - 90;
+        left = MediaQuery.of(context).size.width / 2 - 110;
+        arrowPosition = 'bottom';
+        arrowOffset = 110;
+        break;
+      case 'center-left': // Library ke liye - arrow BOTTOM se (CHANGED)
+        top = MediaQuery.of(context).size.height / 2 - 90;
+        left = 20;
+        arrowPosition = 'bottom'; // ✅ YAHAN CHANGE: right -> bottom
+        arrowOffset = 30;
+        break;
+      case 'center-right': // Settings ke liye - arrow BOTTOM se (CHANGED)
+        top = MediaQuery.of(context).size.height / 2 - 90;
+        left = MediaQuery.of(context).size.width - 240;
+        arrowPosition = 'bottom'; // ✅ YAHAN CHANGE: left -> bottom
+        arrowOffset = 30;
+        break;
+      case 'bottom-center': // Navigation ke liye - arrow TOP se (same)
+        top = MediaQuery.of(context).size.height - 150;
+        left = MediaQuery.of(context).size.width / 2 - 110;
+        arrowPosition = 'top';
+        arrowOffset = 110;
+        break;
+    }
+
+    return Positioned(
+      top: top,
+      left: left,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Main chat bubble
+          Container(
+            width: 220,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  currentStep['title'],
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  currentStep['message'],
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Colors.black54,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    TextButton(
+                      onPressed: _skipTutorial,
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        minimumSize: Size.zero,
+                      ),
+                      child: const Text(
+                        'Skip',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${_currentStep + 1}/${_tutorialSteps.length}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: _nextTutorialStep,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        elevation: 2,
+                        minimumSize: Size.zero,
+                      ),
+                      child: Text(
+                        _currentStep < _tutorialSteps.length - 1 ? 'Next' : 'Done',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Chat bubble arrow
+          if (arrowPosition == 'bottom')
+            Positioned(
+              bottom: -8,
+              left: arrowOffset,
+              child: Container(
+                width: 16,
+                height: 16,
+                color: Colors.transparent,
+                child: CustomPaint(
+                  painter: BubbleArrowPainter(
+                    direction: 'top',
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+
+          if (arrowPosition == 'top')
+            Positioned(
+              top: -8,
+              left: arrowOffset,
+              child: Container(
+                width: 16,
+                height: 16,
+                color: Colors.transparent,
+                child: CustomPaint(
+                  painter: BubbleArrowPainter(
+                    direction: 'bottom',
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+
+          if (arrowPosition == 'right')
+            Positioned(
+              right: -8,
+              top: arrowOffset,
+              child: Container(
+                width: 16,
+                height: 16,
+                color: Colors.transparent,
+                child: CustomPaint(
+                  painter: BubbleArrowPainter(
+                    direction: 'left',
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+
+          if (arrowPosition == 'left')
+            Positioned(
+              left: -8,
+              top: arrowOffset,
+              child: Container(
+                width: 16,
+                height: 16,
+                color: Colors.transparent,
+                child: CustomPaint(
+                  painter: BubbleArrowPainter(
+                    direction: 'right',
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+  // Helper method for guest users
+  void showLockedFeatureDialog(BuildContext context, String feature, bool isDarkMode) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          '$feature Locked 🔒',
+          style: TextStyle(
+            color: isDarkMode ? Colors.white : darkPurple,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Sign up to unlock:',
+              style: TextStyle(
+                color: isDarkMode ? Colors.grey[300] : darkPurple,
+              ),
+            ),
+            const SizedBox(height: 10),
+            _buildFeatureItem('📥 Download videos from 10+ platforms'),
+            _buildFeatureItem('👤 Create your profile & connect with others'),
+            _buildFeatureItem('💬 Chat with the community'),
+            _buildFeatureItem('☁️ Save videos to cloud storage'),
+            _buildFeatureItem('📊 Track your download history'),
+          ],
+        ),
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: TextButton.styleFrom(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    backgroundColor: isDarkMode ? Colors.grey[800] : Colors.grey[100],
+                  ),
+                  child: Text(
+                    'Maybe Later',
+                    style: TextStyle(
+                      color: isDarkMode ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/login');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text(
+                    'Sign Up Now',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeatureItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle, size: 16, color: Colors.green),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 13),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -76,489 +450,437 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.white,
-      body: ShowCaseWidget(
-        onFinish: () {
-          GuideManager.completeGuide();
-        },
-        builder: (context) => Stack(
-          children: [
-            SafeArea(
-              child: Column(
-                children: [
-                  Expanded(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: Column(
-                        children: [
-                          // Header
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  Color(0xFF3B1C32),
-                                  Color(0xFF6A1E55),
-                                  Color(0xFFA64D79),
-                                ],
-                              ),
-                              borderRadius: const BorderRadius.only(
-                                bottomLeft: Radius.circular(30),
-                                bottomRight: Radius.circular(30),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF3B1C32).withOpacity(0.3),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 10),
-                                ),
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      children: [
+                        // Header
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Color(0xFF3B1C32),
+                                Color(0xFF6A1E55),
+                                Color(0xFFA64D79),
                               ],
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'TapMate',
+                            borderRadius: const BorderRadius.only(
+                              bottomLeft: Radius.circular(30),
+                              bottomRight: Radius.circular(30),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF3B1C32).withOpacity(0.3),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'TapMate',
+                                        style: TextStyle(
+                                          fontSize: 32,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                          fontFamily: 'Roboto',
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      SizedBox(
+                                        width: MediaQuery.of(context).size.width * 0.7,
+                                        child: Text(
+                                          'Download and share videos from any platform',
                                           style: TextStyle(
-                                            fontSize: 32,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
+                                            fontSize: 14,
+                                            color: Colors.white.withOpacity(0.9),
+                                            fontWeight: FontWeight.w500,
                                             fontFamily: 'Roboto',
                                           ),
+                                          maxLines: 2,
                                         ),
-                                        const SizedBox(height: 6),
-                                        SizedBox(
-                                          width: MediaQuery.of(context).size.width * 0.7,
-                                          child: Text(
-                                            'Download and share videos from any platform',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.white.withOpacity(0.9),
-                                              fontWeight: FontWeight.w500,
-                                              fontFamily: 'Roboto',
-                                            ),
-                                            maxLines: 2,
+                                      ),
+                                    ],
+                                  ),
+                                  // Profile Icon
+                                  if (!isGuest)
+                                    GestureDetector(
+                                      onTap: () {
+                                        Navigator.pushNamed(context, '/profile');
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.15),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.white.withOpacity(0.3),
+                                            width: 2,
                                           ),
                                         ),
-                                      ],
-                                    ),
-                                    // Profile Icon with showcase
-                                    if (!isGuest)
-                                      buildShowcase(
-                                        key: _profileIconKey,
-                                        title: 'Profile Icon',
-                                        description: 'Tap here to view and edit your profile',
-                                        isDarkMode: isDarkMode,
-                                        isLocked: false,
-                                        child: GestureDetector(
-                                          onTap: () {
-                                            Navigator.pushNamed(context, '/profile');
-                                          },
-                                          child: Container(
-                                            padding: const EdgeInsets.all(10),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white.withOpacity(0.15),
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                color: Colors.white.withOpacity(0.3),
-                                                width: 2,
-                                              ),
-                                            ),
-                                            child: const Icon(
+                                        child: const Icon(
+                                          Icons.person_rounded,
+                                          color: Colors.white,
+                                          size: 24,
+                                        ),
+                                      ),
+                                    )
+                                  else
+                                    GestureDetector(
+                                      onTap: () => showLockedFeatureDialog(context, 'Profile', isDarkMode),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.15),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.white.withOpacity(0.3),
+                                            width: 2,
+                                          ),
+                                        ),
+                                        child: Stack(
+                                          children: [
+                                            const Icon(
                                               Icons.person_rounded,
-                                              color: Colors.white,
+                                              color: Colors.white70,
                                               size: 24,
                                             ),
-                                          ),
+                                            Positioned(
+                                              right: -2,
+                                              top: -2,
+                                              child: Icon(
+                                                Icons.lock,
+                                                color: Colors.white,
+                                                size: 12,
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                      )
-                                    else
-                                      // Locked profile icon for guests
-                                      GestureDetector(
-                                        onTap: () => showLockedFeatureDialog(context, 'Profile', isDarkMode),
-                                        child: Container(
-                                          padding: const EdgeInsets.all(10),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white.withOpacity(0.15),
-                                            shape: BoxShape.circle,
-                                            border: Border.all(
-                                              color: Colors.white.withOpacity(0.3),
-                                              width: 2,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 30),
+
+                              // Ready to Download Card
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.25),
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(14),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: const Icon(
+                                        Icons.download_rounded,
+                                        color: Color(0xFFA64D79),
+                                        size: 28,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 15),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Ready to Download',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                              fontFamily: 'Roboto',
                                             ),
                                           ),
-                                          child: Stack(
-                                            children: [
-                                              const Icon(
-                                                Icons.person_rounded,
-                                                color: Colors.white70,
-                                                size: 24,
-                                              ),
-                                              Positioned(
-                                                right: -2,
-                                                top: -2,
-                                                child: Icon(
-                                                  Icons.lock,
-                                                  color: Colors.white,
-                                                  size: 12,
-                                                ),
-                                              ),
-                                            ],
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            isGuest
+                                                ? 'Sign up to unlock downloads'
+                                                : 'Tap the floating button to start',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: Colors.white.withOpacity(0.8),
+                                              fontFamily: 'Roboto',
+                                            ),
                                           ),
-                                        ),
+                                        ],
                                       ),
+                                    ),
                                   ],
                                 ),
-                                const SizedBox(height: 30),
-
-                                // Ready to Download Card with showcase
-                                buildShowcase(
-                                  key: _downloadCardKey,
-                                  title: 'Download Card',
-                                  description: 'Get started with downloads from here. This card shows you\'re ready to download videos!',
-                                  isDarkMode: isDarkMode,
-                                  isLocked: false,
-                                  child: Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.all(20),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.15),
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(
-                                        color: Colors.white.withOpacity(0.25),
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(14),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(16),
-                                          ),
-                                          child: const Icon(
-                                            Icons.download_rounded,
-                                            color: Color(0xFFA64D79),
-                                            size: 28,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 15),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              const Text(
-                                                'Ready to Download',
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.white,
-                                                  fontFamily: 'Roboto',
-                                                ),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                isGuest
-                                                    ? 'Sign up to unlock downloads'
-                                                    : 'Tap the floating button to start',
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  color: Colors.white.withOpacity(0.8),
-                                                  fontFamily: 'Roboto',
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
+                        ),
 
-                          // Stats Section with showcase
-                          buildShowcase(
-                            key: _statsSectionKey,
-                            title: 'Stats Section',
-                            description: 'Track your downloads, storage usage, and cloud uploads. Monitor your activity at a glance!',
-                            isDarkMode: isDarkMode,
-                            isLocked: isGuest && false, // Stats are visible but some features locked
-                            child: Padding(
-                              padding: const EdgeInsets.all(20),
-                              child: Row(
+                        // Stats Section
+                        Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Row(
+                            children: [
+                              _buildEqualStatCard(
+                                icon: Icons.download_done_rounded,
+                                title: 'Total Downloads',
+                                value: isGuest ? '0' : '247',
+                                color: const Color(0xFFA64D79),
+                                isGuest: isGuest,
+                              ),
+                              const SizedBox(width: 12),
+                              _buildEqualStatCard(
+                                icon: Icons.storage_rounded,
+                                title: 'Storage Used',
+                                value: isGuest ? '0 GB' : '2.4 GB',
+                                color: const Color(0xFF6A1E55),
+                                isGuest: isGuest,
+                              ),
+                              const SizedBox(width: 12),
+                              _buildEqualStatCard(
+                                icon: Icons.cloud_upload_rounded,
+                                title: 'Cloud Uploads',
+                                value: isGuest ? '0' : '89',
+                                color: const Color(0xFF3B1C32),
+                                isGuest: isGuest,
+                                isLocked: isGuest,
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Quick Actions Section
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Quick Actions',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF6A1E55),
+                                  fontFamily: 'Roboto',
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
                                 children: [
-                                  _buildEqualStatCard(
-                                    icon: Icons.download_done_rounded,
-                                    title: 'Total Downloads',
-                                    value: isGuest ? '0' : '247',
-                                    color: const Color(0xFFA64D79),
-                                    isGuest: isGuest,
+                                  Expanded(
+                                    child: _buildEqualQuickAction(
+                                      icon: Icons.video_library_rounded,
+                                      label: 'Library',
+                                      subtitle: 'Manage your downloads',
+                                      color: const Color(0xFFA64D79),
+                                      isLocked: isGuest,
+                                      onTap: () {
+                                        if (isGuest) {
+                                          showLockedFeatureDialog(context, 'Library', isDarkMode);
+                                        } else {
+                                          Navigator.pushNamed(context, '/library');
+                                        }
+                                      },
+                                    ),
                                   ),
-                                  const SizedBox(width: 12),
-                                  _buildEqualStatCard(
-                                    icon: Icons.storage_rounded,
-                                    title: 'Storage Used',
-                                    value: isGuest ? '0 GB' : '2.4 GB',
-                                    color: const Color(0xFF6A1E55),
-                                    isGuest: isGuest,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  _buildEqualStatCard(
-                                    icon: Icons.cloud_upload_rounded,
-                                    title: 'Cloud Uploads',
-                                    value: isGuest ? '0' : '89',
-                                    color: const Color(0xFF3B1C32),
-                                    isGuest: isGuest,
-                                    isLocked: isGuest,
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: _buildEqualQuickAction(
+                                      icon: Icons.settings_rounded,
+                                      label: 'Settings',
+                                      subtitle: 'App preferences',
+                                      color: const Color(0xFF6A1E55),
+                                      isLocked: false,
+                                      onTap: () {
+                                        Navigator.pushNamed(context, '/settings');
+                                      },
+                                    ),
                                   ),
                                 ],
                               ),
-                            ),
+                            ],
                           ),
+                        ),
 
-                          // Quick Actions Section
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Quick Actions',
-                                  style: TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF6A1E55),
-                                    fontFamily: 'Roboto',
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: buildShowcase(
-                                        key: _libraryButtonKey,
-                                        title: 'Library Button',
-                                        description: 'View and manage all downloaded videos. Access your collection anytime!',
-                                        isDarkMode: isDarkMode,
-                                        isLocked: isGuest,
-                                        child: _buildEqualQuickAction(
-                                          icon: Icons.video_library_rounded,
-                                          label: 'Library',
-                                          subtitle: 'Manage your downloads',
-                                          color: const Color(0xFFA64D79),
-                                          isLocked: isGuest,
-                                          onTap: () {
-                                            if (isGuest) {
-                                              showLockedFeatureDialog(context, 'Library', isDarkMode);
-                                            } else {
-                                              Navigator.pushNamed(context, '/library');
-                                            }
-                                          },
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: buildShowcase(
-                                        key: _settingsButtonKey,
-                                        title: 'Settings Button',
-                                        description: 'Customize app preferences and dark mode. Personalize your TapMate experience!',
-                                        isDarkMode: isDarkMode,
-                                        isLocked: false,
-                                        child: _buildEqualQuickAction(
-                                          icon: Icons.settings_rounded,
-                                          label: 'Settings',
-                                          subtitle: 'App preferences',
-                                          color: const Color(0xFF6A1E55),
-                                          isLocked: false,
-                                          onTap: () {
-                                            Navigator.pushNamed(context, '/settings');
-                                          },
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
+                        const SizedBox(height: 25),
 
-                          const SizedBox(height: 25),
-
-                          // Recent Downloads Section - Show empty state for guests
-                          Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 20),
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey.withOpacity(0.1),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                              border: Border.all(
-                                color: const Color(0xFF3B1C32).withOpacity(0.1),
+                        // Recent Downloads Section
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 20),
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
                               ),
+                            ],
+                            border: Border.all(
+                              color: const Color(0xFF3B1C32).withOpacity(0.1),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.history_rounded,
+                                    color: Color(0xFFA64D79),
+                                    size: 24,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    'Recent Downloads',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDarkMode ? Colors.white : const Color(0xFF6A1E55),
+                                      fontFamily: 'Roboto',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              if (isGuest)
+                                _buildEmptyState(
+                                  icon: Icons.video_library_outlined,
+                                  title: 'No downloads yet',
+                                  subtitle: 'Sign up to start downloading videos and build your library!',
+                                  isDarkMode: isDarkMode,
+                                )
+                              else
+                                Column(
                                   children: [
-                                    const Icon(
-                                      Icons.history_rounded,
-                                      color: Color(0xFFA64D79),
-                                      size: 24,
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Text(
-                                      'Recent Downloads',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: isDarkMode ? Colors.white : const Color(0xFF6A1E55),
-                                        fontFamily: 'Roboto',
-                                      ),
-                                    ),
+                                    _buildDownloadItem('Video_001.mp4', '12 MB', Icons.video_file_rounded, isDarkMode),
+                                    _buildDownloadItem('Short_Clip.mp4', '8 MB', Icons.movie_rounded, isDarkMode),
+                                    _buildDownloadItem('Tutorial.mp4', '45 MB', Icons.school_rounded, isDarkMode),
+                                    _buildDownloadItem('Music_Video.mp4', '32 MB', Icons.music_video_rounded, isDarkMode),
                                   ],
                                 ),
-                                const SizedBox(height: 16),
-                                if (isGuest)
-                                  _buildEmptyState(
-                                    icon: Icons.video_library_outlined,
-                                    title: 'No downloads yet',
-                                    subtitle: 'Sign up to start downloading videos and build your library!',
-                                    isDarkMode: isDarkMode,
-                                  )
-                                else
-                                  Column(
-                                    children: [
-                                      _buildDownloadItem('Video_001.mp4', '12 MB', Icons.video_file_rounded, isDarkMode),
-                                      _buildDownloadItem('Short_Clip.mp4', '8 MB', Icons.movie_rounded, isDarkMode),
-                                      _buildDownloadItem('Tutorial.mp4', '45 MB', Icons.school_rounded, isDarkMode),
-                                      _buildDownloadItem('Music_Video.mp4', '32 MB', Icons.music_video_rounded, isDarkMode),
-                                    ],
-                                  ),
-                              ],
-                            ),
+                            ],
                           ),
+                        ),
 
-                          const SizedBox(height: 80),
-                        ],
-                      ),
+                        const SizedBox(height: 80),
+                      ],
                     ),
                   ),
+                ),
 
-                  // Bottom Navigation Bar with showcase
-                  buildShowcase(
-                    key: _navigationBarKey,
-                    title: 'Navigation Bar',
-                    description: 'Navigate between different app sections. Home, Discover, Feed, Messages, and Profile are all here!',
-                    isDarkMode: isDarkMode,
-                    isLocked: false,
-                    child: Container(
-                      height: 70,
-                      decoration: BoxDecoration(
-                        color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.withOpacity(0.1),
-                            blurRadius: 10,
-                            offset: const Offset(0, -2),
-                          ),
-                        ],
-                        border: Border.all(
-                          color: Colors.grey.withOpacity(0.1),
-                        ),
+                // Bottom Navigation Bar
+                Container(
+                  height: 70,
+                  decoration: BoxDecoration(
+                    color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, -2),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildNavItem(Icons.home_rounded, 'Home', true, context, isGuest, isDarkMode),
-                          _buildNavItem(Icons.explore_rounded, 'Discover', false, context, isGuest, isDarkMode),
-                          _buildNavItem(Icons.feed_rounded, 'Feed', false, context, isGuest, isDarkMode),
-                          _buildNavItem(Icons.message_rounded, 'Message', false, context, isGuest, isDarkMode),
-                          _buildNavItem(Icons.person_rounded, 'Profile', false, context, isGuest, isDarkMode),
-                        ],
-                      ),
+                    ],
+                    border: Border.all(
+                      color: Colors.grey.withOpacity(0.1),
                     ),
                   ),
-                ],
-              ),
-            ),
-
-            // Floating Action Button (with showcase, hidden for guests but shown with lock)
-            Positioned(
-              right: 20,
-              bottom: 80,
-              child: buildShowcase(
-                key: _floatingButtonKey,
-                title: 'Floating Download Button',
-                description: 'Tap this button to select a platform and download videos. This is your main download hub!',
-                isDarkMode: isDarkMode,
-                isLocked: isGuest,
-                child: FloatingActionButton(
-                  onPressed: () {
-                    if (isGuest) {
-                      showLockedFeatureDialog(context, 'Download', isDarkMode);
-                    } else {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const PlatformSelectionScreen(),
-                        ),
-                      );
-                    }
-                  },
-                  backgroundColor: isGuest ? Colors.grey : const Color(0xFFA64D79),
-                  foregroundColor: Colors.white,
-                  elevation: 8,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Stack(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      const Icon(
-                        Icons.download_rounded,
-                        size: 28,
-                      ),
-                      if (isGuest)
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.lock,
-                              size: 10,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ),
+                      _buildNavItem(Icons.home_rounded, 'Home', true, context, isGuest, isDarkMode),
+                      _buildNavItem(Icons.explore_rounded, 'Discover', false, context, isGuest, isDarkMode),
+                      _buildNavItem(Icons.feed_rounded, 'Feed', false, context, isGuest, isDarkMode),
+                      _buildNavItem(Icons.message_rounded, 'Message', false, context, isGuest, isDarkMode),
+                      _buildNavItem(Icons.person_rounded, 'Profile', false, context, isGuest, isDarkMode),
                     ],
                   ),
                 ),
+              ],
+            ),
+          ),
+
+          // Floating Action Button
+          Positioned(
+            right: 20,
+            bottom: 80,
+            child: FloatingActionButton(
+              onPressed: () {
+                if (isGuest) {
+                  showLockedFeatureDialog(context, 'Download', isDarkMode);
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PlatformSelectionScreen(),
+                    ),
+                  );
+                }
+              },
+              backgroundColor: isGuest ? Colors.grey : const Color(0xFFA64D79),
+              foregroundColor: Colors.white,
+              elevation: 8,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Stack(
+                children: [
+                  const Icon(
+                    Icons.download_rounded,
+                    size: 28,
+                  ),
+                  if (isGuest)
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.lock,
+                          size: 10,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+
+          // Tutorial Dialog (Appears on top of everything)
+          _buildTutorialDialog(),
+        ],
       ),
     );
   }
@@ -850,33 +1172,33 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildNavItem(
-    IconData icon,
-    String label,
-    bool isActive,
-    BuildContext context,
-    bool isGuest,
-    bool isDarkMode,
-  ) {
+      IconData icon,
+      String label,
+      bool isActive,
+      BuildContext context,
+      bool isGuest,
+      bool isDarkMode,
+      ) {
     final isDisabled = isGuest && (label == 'Message' || label == 'Profile');
 
     return GestureDetector(
       onTap: isDisabled
           ? () {
-              showLockedFeatureDialog(context, label, isDarkMode);
-            }
+        showLockedFeatureDialog(context, label, isDarkMode);
+      }
           : () {
-              if (label == 'Home') {
-                Navigator.pushReplacementNamed(context, '/home');
-              } else if (label == 'Discover') {
-                Navigator.pushReplacementNamed(context, '/search');
-              } else if (label == 'Feed') {
-                Navigator.pushReplacementNamed(context, '/feed');
-              } else if (label == 'Message') {
-                Navigator.pushReplacementNamed(context, '/chat');
-              } else if (label == 'Profile') {
-                Navigator.pushReplacementNamed(context, '/profile');
-              }
-            },
+        if (label == 'Home') {
+          Navigator.pushReplacementNamed(context, '/home');
+        } else if (label == 'Discover') {
+          Navigator.pushReplacementNamed(context, '/search');
+        } else if (label == 'Feed') {
+          Navigator.pushReplacementNamed(context, '/feed');
+        } else if (label == 'Message') {
+          Navigator.pushReplacementNamed(context, '/chat');
+        } else if (label == 'Profile') {
+          Navigator.pushReplacementNamed(context, '/profile');
+        }
+      },
       child: Opacity(
         opacity: isDisabled ? 0.5 : 1.0,
         child: Column(
@@ -916,4 +1238,58 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
+
+// ✅ SEPARATE CLASS FOR BUBBLE ARROW (FILE KE BAHAR ADD KARNA)
+class BubbleArrowPainter extends CustomPainter {
+  final String direction;
+  final Color color;
+
+  BubbleArrowPainter({required this.direction, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+
+    switch (direction) {
+      case 'top': // Arrow points upward (at bottom of bubble)
+        path.moveTo(0, size.height);
+        path.lineTo(size.width / 2, 0);
+        path.lineTo(size.width, size.height);
+        break;
+      case 'bottom': // Arrow points downward (at top of bubble)
+        path.moveTo(0, 0);
+        path.lineTo(size.width / 2, size.height);
+        path.lineTo(size.width, 0);
+        break;
+      case 'left': // Arrow points leftward (at right of bubble)
+        path.moveTo(size.width, 0);
+        path.lineTo(0, size.height / 2);
+        path.lineTo(size.width, size.height);
+        break;
+      case 'right': // Arrow points rightward (at left of bubble)
+        path.moveTo(0, 0);
+        path.lineTo(size.width, size.height / 2);
+        path.lineTo(0, size.height);
+        break;
+    }
+
+    path.close();
+    canvas.drawPath(path, paint);
+
+    // Add subtle shadow
+    final shadowPaint = Paint()
+      ..color = Colors.black.withOpacity(0.1)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+
+    canvas.drawPath(path, shadowPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

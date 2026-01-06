@@ -40,7 +40,6 @@ class _PermissionScreenState extends State<PermissionScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     authProvider.setLoggedIn(true);
     authProvider.setGuestMode(false);
-    authProvider.setOnboardingCompleted(true);
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -190,84 +189,84 @@ class _PermissionScreenState extends State<PermissionScreen> {
     required VoidCallback onGrant,
   }) {
     return Container(
-        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-        padding: const EdgeInsets.all(15),
-        decoration: BoxDecoration(
-          color: granted ? const Color(0xFFF2E5EE) : const Color(0xFFF5F5F5), // light pink-purple if granted
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(color: Colors.black12, blurRadius: 4, offset: const Offset(0, 2)),
-          ],
-        ),
-        child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white, // WHITE BOX
-                  borderRadius: BorderRadius.circular(5),
-                  border: Border.all(color: Colors.black12),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: granted ? const Color(0xFFF2E5EE) : const Color(0xFFF5F5F5), // light pink-purple if granted
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: Colors.black12, blurRadius: 4, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white, // WHITE BOX
+              borderRadius: BorderRadius.circular(5),
+              border: Border.all(color: Colors.black12),
+            ),
+            child: Icon(
+              icon,
+              size: 26,
+              color: granted ? const Color(0xFFA64D79) : Colors.black87, // pink-purple for granted
+            ),
+          ),
+          const SizedBox(width: 15),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: granted ? const Color(0xFFA64D79) : Colors.black,
+                  ),
                 ),
-                child: Icon(
-                  icon,
-                  size: 26,
-                  color: granted ? const Color(0xFFA64D79) : Colors.black87, // pink-purple for granted
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: granted ? const Color(0xFF6A1E55) : Colors.black54,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 15),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: granted ? const Color(0xFFA64D79) : Colors.black,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: granted ? const Color(0xFF6A1E55) : Colors.black54,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              ],
+            ),
+          ),
 
-              // BUTTON (BIGGER & PINK-PURPLE)
-              SizedBox(
-                height: 50,
-                width: 120,
-                child: ElevatedButton(
-                  onPressed: granted ? null : onGrant,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    backgroundColor: Colors.transparent,
-                    elevation: 0,
+          // BUTTON (BIGGER & PINK-PURPLE)
+          SizedBox(
+            height: 50,
+            width: 120,
+            child: ElevatedButton(
+              onPressed: granted ? null : onGrant,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+              ),
+              child: Ink(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFA64D79), Color(0xFF6A1E55)],
                   ),
-                  child: Ink(
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFA64D79), Color(0xFF6A1E55)],
-                      ),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Center(
-                      child: Text(
-                        granted ? "Granted" : "Grant",
-                        style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
-                      ),
-                    ),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Center(
+                  child: Text(
+                    granted ? "Granted" : "Grant",
+                    style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
-            ],
-        ),
-        );}
+            ),
+          ),
+        ],
+      ),
+    );}
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:tapmate/Screen/Auth/permissionscreen.dart';
+import 'package:tapmate/auth_provider.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -180,6 +182,10 @@ class _SignupScreenState extends State<SignupScreen> {
                   onPressed: () {
                     _validateInputs();
                     if (_nameError == null && _emailError == null && _passwordError == null) {
+                      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                      String userId = AuthProvider.generateUserIdFromEmail(_emailController.text);
+                      authProvider.setUserInfo(userId: userId, email: _emailController.text);
+                      authProvider.markAsNewSignUp();
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(builder: (context) => const PermissionScreen()),

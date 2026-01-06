@@ -135,7 +135,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         final authProvider = Provider.of<AuthProvider>(context, listen: false);
                         authProvider.setLoggedIn(true);
                         authProvider.setGuestMode(false);
-                        authProvider.setOnboardingCompleted(true);
+                        String userId = AuthProvider.generateUserIdFromEmail(_emailController.text);
+                        authProvider.setUserInfo(userId: userId, email: _emailController.text);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text("Login Successful")),
                         );

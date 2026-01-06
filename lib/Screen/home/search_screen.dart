@@ -166,7 +166,13 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
                   Row(
                     children: [
                       IconButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () {
+                          Navigator.pushNamedAndRemoveUntil(
+                            context,
+                            '/home',
+                                (route) => false,
+                          );
+                        },
                         icon: const Icon(
                           Icons.arrow_back_ios_new_rounded,
                           color: Colors.white,
@@ -1231,6 +1237,8 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
           contentTitle: '${video["title"]} ($format - $quality)',
           storagePath: path,
           isDeviceStorage: isDeviceStorage,
+          fromPlatformScreen: false, // ✅ Add this
+          sourcePlatform: 'search',
         ),
       ),
     );

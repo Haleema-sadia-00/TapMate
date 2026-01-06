@@ -1,4 +1,3 @@
-// dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'LoginScreen.dart';
@@ -78,13 +77,13 @@ class OnboardingScreen extends StatelessWidget {
 
               const Spacer(),
 
-              // Get Started Button with Gradient
+              // Get Started Button with Gradient - ✅ FIXED
               SizedBox(
                 width: double.infinity,
                 height: 55,
                 child: TextButton(
                   onPressed: () {
-                    Navigator.push(
+                    Navigator.pushReplacement(  // ✅ yahan change kiya
                       context,
                       MaterialPageRoute(
                           builder: (context) => const LoginScreen()),
@@ -120,7 +119,7 @@ class OnboardingScreen extends StatelessWidget {
 
               const SizedBox(height: 15),
 
-              // Continue as Guest
+              // Continue as Guest - ✅ Already fixed hai
               GestureDetector(
                 onTap: () {
                   final authProvider = Provider.of<AuthProvider>(context, listen: false);

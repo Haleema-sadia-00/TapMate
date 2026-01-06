@@ -1309,8 +1309,8 @@ class _FeedScreenState extends State<FeedScreen> {
             contentTitle: '${item['title']} ($format - $quality)',
             storagePath: path,
             isDeviceStorage: true,
-            fromPlatformScreen: false, // ✅ Feed سے ہو تو FALSE
-            sourcePlatform: 'feed', // ✅ 'feed' set کریں
+            fromPlatformScreen: false, //
+            sourcePlatform: 'feed', //
           ),
         ),
       );

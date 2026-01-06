@@ -129,11 +129,13 @@ void showLockedFeatureDialog(BuildContext context, String featureName, bool isDa
         ElevatedButton(
           onPressed: () {
             Navigator.pop(context);
-            // Navigate to login/signup screen
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const LoginScreen()),
-            );
+            // Navigate to login/signup screen AFTER pop to avoid context issues
+            Future.microtask(() {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (ctx) => const LoginScreen()),
+              );
+            });
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: primaryColor,
