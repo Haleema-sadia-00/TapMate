@@ -1,16 +1,34 @@
-# tapmate
+# TapMate - Flutter Social Media App
 
-A new Flutter project.
+![TapMate Banner](https://via.placeholder.com/1200x400/3D314A/FFFFFF?text=TapMate+Social+Media)
 
-## Getting Started
+A premium social media application built with Flutter featuring an elegant color scheme and modern UI.
 
-This project is a starting point for a Flutter application.
+## 🎨 Features
 
-A few resources to get you started if this is your first Flutter project:
+- **Modern UI/UX**: Elegant design with premium color palette
+- **Multi-Theme**: Light & Dark theme support
+- **Social Features**: Chat, Feed, Library, Search
+- **Responsive Design**: Works on all screen sizes
+- **Clean Architecture**: Well-organized code structure
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## 🚀 Getting Started
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### Prerequisites
+- Flutter SDK >= 3.0.0
+- Dart >= 2.19.0
+- Android Studio / VS Code
+
+### Installation
+```bash
+# Clone the repository
+git clone https://github.com/YOUR_USERNAME/tapmate-flutter.git
+
+# Navigate to project
+cd tapmate-flutter
+
+# Install dependencies
+flutter pub get
+
+# Run the app
+flutter run
