@@ -65,7 +65,7 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
       appBar: AppBar(
         title: const Text('Follow Requests'),
         backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
+        foregroundColor: AppColors.lightSurface,
       ),
       body: _pendingRequests.isEmpty
           ? Center(
@@ -139,7 +139,7 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
                       request['full_name'] ?? 'User',
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
+                      backgroundColor: AppColors.lightSurface,
                       foregroundColor: Colors.red,
                       side: const BorderSide(color: Colors.red),
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -156,7 +156,7 @@ class _FollowRequestsScreenState extends State<FollowRequestsScreen> {
                       backgroundColor: AppColors.primary,
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     ),
-                    child: const Text('Accept', style: TextStyle(color: Colors.white)),
+                    child: const Text('Accept', style: TextStyle(color: AppColors.lightSurface)),
                   ),
                 ],
               ),

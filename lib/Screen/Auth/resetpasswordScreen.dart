@@ -33,7 +33,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.lightSurface,
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -48,12 +48,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back, color: Colors.black87),
+                    icon: Icon(Icons.arrow_back, color: AppColors.textMain),
                   ),
                   const Text(
                     "Back to Login",
                     style: TextStyle(
-                      color: Colors.black87,
+                      color: AppColors.textMain,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -78,7 +78,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   ),
                 ),
                 child: const Center(
-                  child: Icon(Icons.download, color: Colors.white, size: 40),
+                  child: Icon(Icons.download, color: AppColors.lightSurface, size: 40),
                 ),
               ),
 
@@ -99,7 +99,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 "Enter your email address and we’ll send\nyou a link to reset your password.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.black54,
+                  color: AppColors.textMain,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -113,16 +113,16 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   TextField(
                     controller: _emailController,
                     onChanged: (_) => _validateEmail(),
-                    style: const TextStyle(color: Colors.black87),
+                    style: const TextStyle(color: AppColors.textMain),
                     decoration: InputDecoration(
                       prefixIcon:
-                      const Icon(Icons.email_outlined, color: Colors.black54),
+                      const Icon(Icons.email_outlined, color: AppColors.textMain),
                       hintText: "Email Address",
                       filled: true,
                       fillColor: const Color(0xFFF0F0F0),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Colors.black12),
+                        borderSide: const BorderSide(color: AppColors.textMain),
                       ),
                     ),
                   ),
@@ -173,7 +173,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       child: Text(
                         "Send Reset Link",
                         style: TextStyle(
-                          color: Colors.white,
+                          color: AppColors.lightSurface,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),

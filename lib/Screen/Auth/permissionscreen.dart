@@ -50,7 +50,7 @@ class _PermissionScreenState extends State<PermissionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.lightSurface,
       body: SafeArea(
         child: Column(
           children: [
@@ -61,7 +61,7 @@ class _PermissionScreenState extends State<PermissionScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.arrow_back, size: 28, color: Colors.black),
+                      icon: const Icon(Icons.arrow_back, size: 28, color: AppColors.textMain),
                       onPressed: () => Navigator.pop(context),
                     ),
                     const SizedBox(height: 10),
@@ -74,21 +74,21 @@ class _PermissionScreenState extends State<PermissionScreen> {
                           ),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Icon(Icons.download_rounded, color: Colors.white, size: 55),
+                        child: const Icon(Icons.download_rounded, color: AppColors.lightSurface, size: 55),
                       ),
                     ),
                     const SizedBox(height: 20),
                     const Center(
                       child: Text(
                         "Grant Permissions",
-                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.black),
+                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: AppColors.textMain),
                       ),
                     ),
                     const SizedBox(height: 5),
-                    const Center(
+                    Center(
                       child: Text(
                         "TapMate needs these permissions to function properly",
-                        style: TextStyle(fontSize: 14, color: Colors.black54),
+                        style: TextStyle(fontSize: 14, color: AppColors.textMain),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -156,7 +156,7 @@ class _PermissionScreenState extends State<PermissionScreen> {
                         child: const Center(
                           child: Text(
                             "Continue",
-                            style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                            style: TextStyle(color: AppColors.lightSurface, fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ),
@@ -167,7 +167,7 @@ class _PermissionScreenState extends State<PermissionScreen> {
                     onTap: _navigateToHome,
                     child: const Text(
                       "Skip for Now",
-                      style: TextStyle(color: Colors.black54, fontSize: 15, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: AppColors.textMain, fontSize: 15, fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -196,7 +196,7 @@ class _PermissionScreenState extends State<PermissionScreen> {
         color: granted ? const Color(0xFFF2E5EE) : const Color(0xFFF5F5F5), // light pink-purple if granted
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
-          BoxShadow(color: Colors.black12, blurRadius: 4, offset: const Offset(0, 2)),
+          BoxShadow(color: AppColors.textMain, blurRadius: 4, offset: const Offset(0, 2)),
         ],
       ),
       child: Row(
@@ -204,14 +204,14 @@ class _PermissionScreenState extends State<PermissionScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.white, // WHITE BOX
+              color: AppColors.lightSurface, // WHITE BOX
               borderRadius: BorderRadius.circular(5),
-              border: Border.all(color: Colors.black12),
+              border: Border.all(color: AppColors.textMain),
             ),
             child: Icon(
               icon,
               size: 26,
-              color: granted ?  AppColors.primary : Colors.black87, // pink-purple for granted
+              color: granted ?  AppColors.primary : AppColors.textMain, // pink-purple for granted
             ),
           ),
           const SizedBox(width: 15),
@@ -224,7 +224,7 @@ class _PermissionScreenState extends State<PermissionScreen> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: granted ?  AppColors.primary : Colors.black,
+                    color: granted ?  AppColors.primary : AppColors.textMain,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -232,7 +232,7 @@ class _PermissionScreenState extends State<PermissionScreen> {
                   subtitle,
                   style: TextStyle(
                     fontSize: 13,
-                    color: granted ?  AppColors.secondary : Colors.black54,
+                    color: granted ?  AppColors.secondary : AppColors.textMain,
                   ),
                 ),
               ],
@@ -261,7 +261,7 @@ class _PermissionScreenState extends State<PermissionScreen> {
                 child: Center(
                   child: Text(
                     granted ? "Granted" : "Grant",
-                    style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                    style: const TextStyle(color: AppColors.lightSurface, fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),

@@ -184,7 +184,7 @@ class _StorageSelectionDialogState extends State<StorageSelectionDialog> {
         child: Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.lightSurface,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
@@ -204,7 +204,7 @@ class _StorageSelectionDialogState extends State<StorageSelectionDialog> {
                     ),
                     child: const Icon(
                       Icons.download_rounded,
-                      color: Colors.white,
+                      color: AppColors.lightSurface,
                       size: 24,
                     ),
                   ),

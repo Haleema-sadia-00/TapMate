@@ -1,6 +1,8 @@
 // lib/auth_provider.dart
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthProvider extends ChangeNotifier {
   bool _isGuest = false;
@@ -9,19 +11,35 @@ class AuthProvider extends ChangeNotifier {
   String _userId = '';
   bool _isNewSignUp = false;
   String _userEmail = '';
+  String _userName = '';
+
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   bool get isGuest => _isGuest;
   bool get isLoggedIn => _isLoggedIn;
   bool get hasCompletedOnboarding => _hasCompletedOnboarding;
   bool get canAccessFullFeatures => _isLoggedIn && !_isGuest;
-
-  // NEW GETTERS
   String get userId => _isGuest ? 'guest' : _userId.isNotEmpty ? _userId : 'unknown';
-  bool? get isNewSignUp => _isNewSignUp;
+  bool get isNewSignUp => _isNewSignUp;
   String get userEmail => _userEmail;
+  String get userName => _userName;
 
   AuthProvider() {
     _loadAuthState();
+    _checkCurrentUser();
+  }
+
+  Future<void> _checkCurrentUser() async {
+    User? user = _auth.currentUser;
+    if (user != null) {
+      _userId = user.uid;
+      _userEmail = user.email ?? '';
+      _userName = user.displayName ?? '';
+      _isLoggedIn = true;
+      _isGuest = false;
+      notifyListeners();
+    }
   }
 
   Future<void> _loadAuthState() async {
@@ -31,27 +49,202 @@ class AuthProvider extends ChangeNotifier {
     _hasCompletedOnboarding = prefs.getBool('has_completed_onboarding') ?? false;
     _userId = prefs.getString('user_id') ?? '';
     _userEmail = prefs.getString('user_email') ?? '';
+    _userName = prefs.getString('user_name') ?? '';
     _isNewSignUp = prefs.getBool('is_new_signup') ?? false;
     notifyListeners();
   }
 
-  // NEW: Set user ID and email (call this after login/signup)
-  Future<void> setUserInfo({required String userId, required String email}) async {
+  // 🔥 FIREBASE LOGIN METHOD
+  Future<Map<String, dynamic>> loginWithEmailPassword(String email, String password) async {
+    try {
+      UserCredential result = await _auth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+
+      _userId = result.user?.uid ?? '';
+      _userEmail = result.user?.email ?? email;
+      _userName = result.user?.displayName ?? '';
+      _isLoggedIn = true;
+      _isGuest = false;
+      _isNewSignUp = false;
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_id', _userId);
+      await prefs.setString('user_email', _userEmail);
+      await prefs.setString('user_name', _userName);
+      await prefs.setBool('is_logged_in', true);
+      await prefs.setBool('is_guest', false);
+      await prefs.setBool('is_new_signup', false);
+
+      notifyListeners();
+
+      return {'success': true, 'message': 'Login successful', 'user': result.user};
+    } on FirebaseAuthException catch (e) {
+      String message = 'Login failed';
+      if (e.code == 'user-not-found' || e.code == 'wrong-password') {
+        message = 'Invalid email or password';
+      } else if (e.code == 'too-many-requests') {
+        message = 'Too many attempts. Try again later.';
+      } else if (e.code == 'user-disabled') {
+        message = 'This account has been disabled.';
+      } else if (e.code == 'network-request-failed') {
+        message = 'Network error. Check your connection.';
+      }
+      return {'success': false, 'message': message};
+    } catch (e) {
+      return {'success': false, 'message': 'An error occurred. Please try again.'};
+    }
+  }
+
+  // 🔥 FIREBASE SIGNUP METHOD
+  Future<Map<String, dynamic>> signUpWithEmailPassword({
+    required String name,
+    required String email,
+    required String password,
+    String? phone,
+    DateTime? dob,
+    String? gender,
+    String? username,
+  }) async {
+    try {
+      // Create user in Firebase
+      UserCredential result = await _auth.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+
+      // Update display name
+      if (result.user != null) {
+        await result.user!.updateDisplayName(name);
+
+        // Save additional user data to Firestore
+        await _firestore.collection('users').doc(result.user!.uid).set({
+          'name': name,
+          'email': email.trim(),
+          'username': username ?? name.toLowerCase().replaceAll(' ', ''),
+          'phone': phone ?? '',
+          'dob': dob?.toIso8601String(),
+          'gender': gender ?? '',
+          'createdAt': DateTime.now().toIso8601String(),
+          'updatedAt': DateTime.now().toIso8601String(),
+        });
+      }
+
+      _userId = result.user?.uid ?? '';
+      _userEmail = result.user?.email ?? email;
+      _userName = name;
+      _isLoggedIn = true;
+      _isGuest = false;
+      _isNewSignUp = true;
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_id', _userId);
+      await prefs.setString('user_email', _userEmail);
+      await prefs.setString('user_name', _userName);
+      await prefs.setBool('is_logged_in', true);
+      await prefs.setBool('is_guest', false);
+      await prefs.setBool('is_new_signup', true);
+
+      notifyListeners();
+
+      return {'success': true, 'message': 'Account created successfully', 'user': result.user};
+    } on FirebaseAuthException catch (e) {
+      String message = 'Signup failed';
+      if (e.code == 'email-already-in-use') {
+        message = 'This email is already registered';
+      } else if (e.code == 'weak-password') {
+        message = 'Password is too weak';
+      } else if (e.code == 'invalid-email') {
+        message = 'Invalid email address';
+      } else if (e.code == 'operation-not-allowed') {
+        message = 'Email/password accounts are not enabled';
+      }
+      return {'success': false, 'message': message};
+    } catch (e) {
+      return {'success': false, 'message': 'An error occurred. Please try again.'};
+    }
+  }
+
+  // 🔥 FIREBASE LOGOUT
+  Future<void> logout() async {
+    await _auth.signOut();
+
+    _isGuest = false;
+    _isLoggedIn = false;
+    _userId = '';
+    _userEmail = '';
+    _userName = '';
+    _isNewSignUp = false;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('is_guest', false);
+    await prefs.setBool('is_logged_in', false);
+    await prefs.setString('user_id', '');
+    await prefs.setString('user_email', '');
+    await prefs.setString('user_name', '');
+    await prefs.setBool('is_new_signup', false);
+
+    notifyListeners();
+  }
+
+  // 🔥 RESET PASSWORD
+  Future<Map<String, dynamic>> resetPassword(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email.trim());
+      return {'success': true, 'message': 'Password reset email sent'};
+    } on FirebaseAuthException catch (e) {
+      String message = 'Failed to send reset email';
+      if (e.code == 'user-not-found') {
+        message = 'No account found with this email';
+      } else if (e.code == 'invalid-email') {
+        message = 'Invalid email address';
+      }
+      return {'success': false, 'message': message};
+    } catch (e) {
+      return {'success': false, 'message': 'An error occurred'};
+    }
+  }
+
+  // 🔥 SOCIAL LOGIN (Simulated for now)
+  Future<void> socialLogin(String platform) async {
+    await Future.delayed(const Duration(seconds: 2));
+
+    _userId = 'social_${platform.toLowerCase()}_${DateTime.now().millisecondsSinceEpoch}';
+    _userEmail = 'user@$platform.com';
+    _userName = platform;
+    _isLoggedIn = true;
+    _isGuest = false;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_id', _userId);
+    await prefs.setString('user_email', _userEmail);
+    await prefs.setString('user_name', _userName);
+    await prefs.setBool('is_logged_in', true);
+    await prefs.setBool('is_guest', false);
+    await prefs.setBool('is_new_signup', false);
+
+    notifyListeners();
+  }
+
+  // Existing methods (unchanged but updated for Firebase)
+  Future<void> setUserInfo({required String userId, required String email, String? name}) async {
     _userId = userId;
     _userEmail = email;
+    _userName = name ?? '';
     _isGuest = false;
     _isLoggedIn = true;
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_id', userId);
     await prefs.setString('user_email', email);
+    if (name != null) await prefs.setString('user_name', name);
     await prefs.setBool('is_guest', false);
     await prefs.setBool('is_logged_in', true);
 
     notifyListeners();
   }
 
-  // NEW: Mark as new sign-up (call this after sign-up)
   Future<void> markAsNewSignUp() async {
     _isNewSignUp = true;
     final prefs = await SharedPreferences.getInstance();
@@ -59,7 +252,6 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // NEW: Clear new sign-up flag (after guide shown)
   Future<void> clearNewSignUpFlag() async {
     _isNewSignUp = false;
     final prefs = await SharedPreferences.getInstance();
@@ -67,7 +259,6 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // UPDATED: Guest mode
   Future<void> setGuestMode(bool isGuest) async {
     _isGuest = isGuest;
     _isLoggedIn = !isGuest;
@@ -86,7 +277,6 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // UPDATED: Logged in
   Future<void> setLoggedIn(bool loggedIn) async {
     _isLoggedIn = loggedIn;
     _isGuest = !loggedIn;
@@ -110,36 +300,13 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> logout() async {
-    _isGuest = false;
-    _isLoggedIn = false;
-    _userId = '';
-    _userEmail = '';
-    _isNewSignUp = false;
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('is_guest', false);
-    await prefs.setBool('is_logged_in', false);
-    await prefs.setString('user_id', '');
-    await prefs.setString('user_email', '');
-    await prefs.setBool('is_new_signup', false);
-
-    notifyListeners();
-  }
-
-  // NEW: Generate a simple user ID from email
   static String generateUserIdFromEmail(String email) {
     if (email.isEmpty) return 'unknown';
     return email.split('@').first + '_' + DateTime.now().millisecondsSinceEpoch.toString();
   }
 
-  // NEW: Check if user exists (for debugging)
   Future<bool> hasUserData() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('user_id')?.isNotEmpty ?? false;
   }
 }
-
-
-
-

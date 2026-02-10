@@ -252,11 +252,11 @@ class _DownloadProgressScreenState extends State<DownloadProgressScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.lightSurface,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: AppColors.textMain.withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -287,7 +287,7 @@ class _DownloadProgressScreenState extends State<DownloadProgressScreen> {
                     ? Icons.check
                     : Icons.download_rounded,
                 size: 14,
-                color: Colors.white,
+                color: AppColors.lightSurface,
               ),
             ],
           ),
@@ -337,7 +337,7 @@ class _DownloadProgressScreenState extends State<DownloadProgressScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.lightSurface,
       body: SafeArea(
         child: Column(
           children: [
@@ -370,7 +370,7 @@ class _DownloadProgressScreenState extends State<DownloadProgressScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        icon: const Icon(Icons.arrow_back, color: AppColors.lightSurface),
                         onPressed: () {
                           // Use the FIXED back navigation
                           _handleBackNavigation();
@@ -380,14 +380,14 @@ class _DownloadProgressScreenState extends State<DownloadProgressScreen> {
                         child: Text(
                           'Download Manager',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: AppColors.lightSurface,
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.video_library_rounded, color: Colors.white),
+                        icon: const Icon(Icons.video_library_rounded, color: AppColors.lightSurface),
                         onPressed: () {
                           // Go to Library screen
                           Navigator.push(
@@ -628,7 +628,7 @@ class _DownloadProgressScreenState extends State<DownloadProgressScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AppColors.lightSurface,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: Colors.grey[200]!),
                         ),

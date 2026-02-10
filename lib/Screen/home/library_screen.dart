@@ -70,7 +70,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final isGuest = authProvider.isGuest;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.lightSurface,
       body: SafeArea(
         child: Column(
           children: [
@@ -102,21 +102,21 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        icon: const Icon(Icons.arrow_back, color: AppColors.lightSurface),
                         onPressed: () => Navigator.pop(context),
                       ),
                       const Expanded(
                         child: Text(
                           'My Library',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: AppColors.lightSurface,
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.search, color: Colors.white),
+                        icon: const Icon(Icons.search, color: AppColors.lightSurface),
                         onPressed: () {
                           // TODO: Implement search
                         },
@@ -127,7 +127,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   Text(
                     isGuest ? 'Sign up to access your library' : '${_downloads.length} downloaded items',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
+                      color: AppColors.lightSurface.withOpacity(0.9),
                       fontSize: 14,
                     ),
                   ),
@@ -184,7 +184,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                               child: const Icon(
                                 Icons.lock,
                                 size: 24,
-                                color: Colors.white,
+                                color: AppColors.lightSurface,
                               ),
                             ),
                           ),
@@ -232,7 +232,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         child: const Text(
                           'Sign Up to Unlock',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: AppColors.lightSurface,
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
@@ -299,10 +299,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
       },
       selectedColor: AppColors.primary,
       labelStyle: TextStyle(
-        color: isSelected ? Colors.white : AppColors.accent,
+        color: isSelected ? AppColors.lightSurface : AppColors.accent,
         fontWeight: FontWeight.w600,
       ),
-      checkmarkColor: Colors.white,
+      checkmarkColor: AppColors.lightSurface,
     );
   }
 
@@ -311,7 +311,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.lightSurface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: AppColors.accent.withOpacity(0.1),

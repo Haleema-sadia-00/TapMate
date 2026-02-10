@@ -20,10 +20,10 @@ class _FollowersScreenState extends State<FollowersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.lightSurface,
       appBar: AppBar(
         title: const Text('Followers'),
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.lightSurface,
         foregroundColor: AppColors.accent,
         elevation: 0,
       ),
@@ -74,7 +74,7 @@ class _FollowersScreenState extends State<FollowersScreen> {
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: follower['is_following'] ?? false ? Colors.grey[300] : AppColors.primary,
-          foregroundColor: follower['is_following'] ?? false ? Colors.black : Colors.white,
+          foregroundColor: follower['is_following'] ?? false ? AppColors.textMain : AppColors.lightSurface,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),

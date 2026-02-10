@@ -66,7 +66,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with SingleTicker
 
     if (isGuest) {
       return Scaffold(
-        backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.white,
+        backgroundColor: isDarkMode ? const Color(0xFF121212) : AppColors.lightSurface,
         body: SafeArea(
           child: Center(
             child: Padding(
@@ -85,7 +85,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with SingleTicker
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.white : AppColors.accent,
+                      color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -109,7 +109,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with SingleTicker
                     child: const Text(
                       'Go to Home',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AppColors.lightSurface,
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
@@ -124,7 +124,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with SingleTicker
     }
 
     return Scaffold(
-      backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.white,
+      backgroundColor: isDarkMode ? const Color(0xFF121212) : AppColors.lightSurface,
       body: SafeArea(
         child: Column(
           children: [
@@ -153,21 +153,21 @@ class _UserProfileScreenState extends State<UserProfileScreen> with SingleTicker
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    icon: const Icon(Icons.arrow_back, color: AppColors.lightSurface),
                     onPressed: () => Navigator.pop(context),
                   ),
                   const Expanded(
                     child: Text(
                       'Profile',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AppColors.lightSurface,
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.more_vert, color: Colors.white),
+                    icon: const Icon(Icons.more_vert, color: AppColors.lightSurface),
                     onPressed: () {
                       _showProfileOptions();
                     },
@@ -195,7 +195,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with SingleTicker
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: Colors.white,
+                                  color: AppColors.lightSurface,
                                   width: 4,
                                 ),
                                 image: DecorationImage(
@@ -291,7 +291,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with SingleTicker
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
-                                  color: isDarkMode ? Colors.white : AppColors.accent,
+                                  color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
                                 ),
                               ),
                               const SizedBox(height: 6),
@@ -328,13 +328,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> with SingleTicker
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.lock, size: 14, color: isDarkMode ? Colors.white : Colors.grey[600]),
+                                Icon(Icons.lock, size: 14, color: isDarkMode ? AppColors.lightSurface : Colors.grey[600]),
                                 const SizedBox(width: 6),
                                 Text(
                                   'Private Account',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: isDarkMode ? Colors.white : Colors.grey[600],
+                                    color: isDarkMode ? AppColors.lightSurface : Colors.grey[600],
                                   ),
                                 ),
                               ],
@@ -362,7 +362,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with SingleTicker
                                 child: const Text(
                                   'Edit Profile',
                                   style: TextStyle(
-                                    color: Colors.white,
+                                    color: AppColors.lightSurface,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -425,7 +425,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with SingleTicker
                                 'No posts yet',
                                 style: TextStyle(
                                   fontSize: 18,
-                                  color: isDarkMode ? Colors.white : AppColors.accent,
+                                  color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -451,7 +451,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with SingleTicker
                                 ),
                                 child: const Text(
                                   'Create First Post',
-                                  style: TextStyle(color: Colors.white),
+                                  style: TextStyle(color: AppColors.lightSurface),
                                 ),
                               ),
                             ],
@@ -481,7 +481,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with SingleTicker
                                 'No videos yet',
                                 style: TextStyle(
                                   fontSize: 18,
-                                  color: isDarkMode ? Colors.white : AppColors.accent,
+                                  color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -512,7 +512,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with SingleTicker
                                 'No saved posts',
                                 style: TextStyle(
                                   fontSize: 18,
-                                  color: isDarkMode ? Colors.white : AppColors.accent,
+                                  color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -551,7 +551,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with SingleTicker
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(
-                color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                color: isDarkMode ? const Color(0xFF1E1E1E) : AppColors.lightSurface,
                 border: Border(
                   top: BorderSide(color: Colors.grey.withOpacity(0.1)),
                 ),
@@ -572,7 +572,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with SingleTicker
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
+                    foregroundColor: AppColors.lightSurface,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -587,7 +587,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with SingleTicker
             Container(
               height: 70,
               decoration: BoxDecoration(
-                color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                color: isDarkMode ? const Color(0xFF1E1E1E) : AppColors.lightSurface,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.grey.withOpacity(0.1),
@@ -661,7 +661,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with SingleTicker
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: isDarkMode ? Colors.white : AppColors.accent,
+            color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
           ),
         ),
         const SizedBox(height: 4),
@@ -706,17 +706,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> with SingleTicker
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
+                  color: AppColors.textMain.withOpacity(0.7),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.favorite, size: 12, color: Colors.white),
+                    const Icon(Icons.favorite, size: 12, color: AppColors.lightSurface),
                     const SizedBox(width: 4),
                     Text(
                       _formatNumber(post['likes_count'] ?? 0),
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.lightSurface,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
@@ -733,17 +733,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> with SingleTicker
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
+                  color: AppColors.textMain.withOpacity(0.7),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.comment, size: 12, color: Colors.white),
+                    const Icon(Icons.comment, size: 12, color: AppColors.lightSurface),
                     const SizedBox(width: 4),
                     Text(
                       _formatNumber(post['comments_count'] ?? 0),
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.lightSurface,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
@@ -783,10 +783,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> with SingleTicker
               child: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.6),
+                  color: AppColors.textMain.withOpacity(0.6),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.play_arrow, color: Colors.white, size: 30),
+                child: const Icon(Icons.play_arrow, color: AppColors.lightSurface, size: 30),
               ),
             ),
           ],
@@ -965,7 +965,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with SingleTicker
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
             ),
-            child: const Text('Log Out', style: TextStyle(color: Colors.white)),
+            child: const Text('Log Out', style: TextStyle(color: AppColors.lightSurface)),
           ),
         ],
       ),

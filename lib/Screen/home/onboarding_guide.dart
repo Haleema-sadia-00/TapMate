@@ -56,7 +56,7 @@ Widget buildShowcase({
     titleTextStyle: TextStyle(
       fontSize: 20,
       fontWeight: FontWeight.bold,
-      color: isDarkMode ? Colors.white : AppColors.accent,
+      color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
       fontFamily: 'Roboto',
     ),
     descTextStyle: TextStyle(
@@ -68,9 +68,9 @@ Widget buildShowcase({
     targetBorderRadius: BorderRadius.circular(16),
     tooltipBackgroundColor: isDarkMode
         ? const Color(0xFF1E1E1E)
-        : Colors.white,
-    textColor: isDarkMode ? Colors.white : AppColors.accent,
-    overlayColor: Colors.black.withOpacity(0.7),
+        : AppColors.lightSurface,
+    textColor: isDarkMode ? AppColors.lightSurface : AppColors.accent,
+    overlayColor: AppColors.textMain.withOpacity(0.7),
     targetPadding: const EdgeInsets.all(8),
     tooltipPadding: const EdgeInsets.all(20),
     showArrow: true,
@@ -84,7 +84,7 @@ void showLockedFeatureDialog(BuildContext context, String featureName, bool isDa
   showDialog(
     context: context,
     builder: (context) => AlertDialog(
-      backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+      backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : AppColors.lightSurface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Row(
         children: [
@@ -94,7 +94,7 @@ void showLockedFeatureDialog(BuildContext context, String featureName, bool isDa
             child: Text(
               'Feature Locked',
               style: TextStyle(
-                color: isDarkMode ? Colors.white : AppColors.accent,
+                color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
                 fontFamily: 'Roboto',
@@ -143,7 +143,7 @@ void showLockedFeatureDialog(BuildContext context, String featureName, bool isDa
           child: const Text(
             'Sign Up',
             style: TextStyle(
-              color: Colors.white,
+              color: AppColors.lightSurface,
               fontWeight: FontWeight.bold,
               fontFamily: 'Roboto',
             ),

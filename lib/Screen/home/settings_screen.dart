@@ -6,8 +6,6 @@ import 'package:tapmate/utils/guide_manager.dart';
 import 'package:tapmate/auth_provider.dart';
 import 'package:tapmate/Screen/Auth/LoginScreen.dart';
 import 'package:tapmate/Screen/home/follow_requests_screen.dart';
-import 'package:tapmate/Screen/constants/app_colors.dart';
-
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -87,7 +85,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ? 'Account is now private. New followers must request to follow you.'
               : 'Account is now public. Anyone can follow you and see your posts.',
         ),
-        backgroundColor: AppColors.primary,
+        backgroundColor: Theme.of(context).colorScheme.primary,
       ),
     );
 
@@ -105,6 +103,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final isDarkMode = themeProvider.isDarkMode;
     final pendingRequestsCount = DummyDataService.getPendingRequestsCount(); // NEW
 
+    // Get Theme colors
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+    final scaffoldBackgroundColor = theme.scaffoldBackgroundColor;
+    final cardColor = theme.cardTheme.color ?? (isDarkMode ? Colors.grey[900]! : Colors.white);
+
     // Sync local state with provider
     if (_darkMode != isDarkMode) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -117,7 +122,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     return Scaffold(
-      backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.white,
+      backgroundColor: scaffoldBackgroundColor, // ✅ Theme-based
       body: SafeArea(
         child: Column(
           children: [
@@ -129,7 +134,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [AppColors.accent, AppColors.secondary, AppColors.primary],
+                  colors: [
+                    colorScheme.tertiary ?? colorScheme.secondary,
+                    colorScheme.secondary,
+                    colorScheme.primary
+                  ],
                 ),
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(30),
@@ -137,7 +146,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.accent.withOpacity(0.3),
+                    color: (colorScheme.tertiary ?? colorScheme.secondary).withOpacity(0.3),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -199,18 +208,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // User Info Section
-                    _buildUserInfoCard(isDarkMode),
+                    _buildUserInfoCard(theme, colorScheme),
 
                     const SizedBox(height: 25),
 
                     // Account Section
-                    _buildSectionTitle('Account', isDarkMode),
-                    _buildSettingsCard(isDarkMode: isDarkMode, children: [
+                    _buildSectionTitle('Account', colorScheme),
+                    _buildSettingsCard(theme: theme, children: [
                       _buildSettingsTile(
                         icon: Icons.person_outline,
                         title: 'Edit Profile',
                         subtitle: 'Change your profile information',
-                        isDarkMode: isDarkMode,
+                        theme: theme,
                         onTap: () {
                           Navigator.pushNamed(context, '/profile');
                         },
@@ -223,7 +232,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         subtitle: pendingRequestsCount > 0
                             ? '$pendingRequestsCount pending requests'
                             : 'No pending requests',
-                        isDarkMode: isDarkMode,
+                        theme: theme,
                         onTap: () {
                           if (pendingRequestsCount > 0) {
                             Navigator.push(
@@ -234,7 +243,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: const Text('No pending follow requests'),
-                                backgroundColor: AppColors.primary,
+                                backgroundColor: colorScheme.primary,
                               ),
                             );
                           }
@@ -246,9 +255,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         icon: Icons.email_outlined,
                         title: 'Email Settings',
                         subtitle: 'Manage email preferences',
-                        isDarkMode: isDarkMode,
+                        theme: theme,
                         onTap: () {
-                          _showEmailSettingsDialog(isDarkMode);
+                          _showEmailSettingsDialog(theme);
                         },
                       ),
                       const Divider(),
@@ -256,9 +265,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         icon: Icons.security_outlined,
                         title: 'Privacy & Security',
                         subtitle: 'Control your privacy settings',
-                        isDarkMode: isDarkMode,
+                        theme: theme,
                         onTap: () {
-                          _showPrivacySettingsDialog(isDarkMode);
+                          _showPrivacySettingsDialog(theme);
                         },
                       ),
                     ]),
@@ -266,15 +275,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(height: 25),
 
                     // Cloud & Backup Section
-                    _buildSectionTitle('Cloud & Backup', isDarkMode),
-                    _buildSettingsCard(isDarkMode: isDarkMode, children: [
+                    _buildSectionTitle('Cloud & Backup', colorScheme),
+                    _buildSettingsCard(theme: theme, children: [
                       _buildSettingsTile(
                         icon: Icons.cloud_queue,
                         title: 'Cloud Storage',
                         subtitle: '${_storageUsed.toStringAsFixed(1)} GB used of $_storageTotal GB',
-                        isDarkMode: isDarkMode,
+                        theme: theme,
                         onTap: () {
-                          _showStorageDetails(isDarkMode);
+                          _showStorageDetails(theme);
                         },
                       ),
                       const Divider(),
@@ -282,9 +291,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         icon: Icons.backup,
                         title: 'Last Backup',
                         subtitle: _lastBackup,
-                        isDarkMode: isDarkMode,
+                        theme: theme,
                         onTap: () {
-                          _showBackupInfoDialog(isDarkMode);
+                          _showBackupInfoDialog(theme);
                         },
                       ),
                       const Divider(),
@@ -293,13 +302,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         title: 'Auto Backup',
                         subtitle: 'Automatically backup content',
                         value: _autoBackup,
-                        isDarkMode: isDarkMode,
+                        theme: theme,
                         onChanged: (value) {
                           setState(() {
                             _autoBackup = value;
                           });
                           if (value) {
-                            _showAutoBackupInfoDialog(isDarkMode);
+                            _showAutoBackupInfoDialog(theme);
                           }
                         },
                       ),
@@ -308,15 +317,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(height: 25),
 
                     // Download Settings
-                    _buildSectionTitle('Download Settings', isDarkMode),
-                    _buildSettingsCard(isDarkMode: isDarkMode, children: [
+                    _buildSectionTitle('Download Settings', colorScheme),
+                    _buildSettingsCard(theme: theme, children: [
                       _buildSettingsTile(
                         icon: Icons.hd_outlined,
                         title: 'Video Quality',
                         subtitle: _downloadQuality,
-                        isDarkMode: isDarkMode,
+                        theme: theme,
                         onTap: () {
-                          _showQualitySelector(isDarkMode);
+                          _showQualitySelector(theme);
                         },
                       ),
                       const Divider(),
@@ -324,9 +333,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         icon: Icons.folder_open,
                         title: 'Storage Location',
                         subtitle: _storageLocation,
-                        isDarkMode: isDarkMode,
+                        theme: theme,
                         onTap: () {
-                          _showStorageLocationSelector(isDarkMode);
+                          _showStorageLocationSelector(theme);
                         },
                       ),
                       const Divider(),
@@ -335,7 +344,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         title: 'Data Saver Mode',
                         subtitle: 'Reduce mobile data usage',
                         value: _dataSaver,
-                        isDarkMode: isDarkMode,
+                        theme: theme,
                         onChanged: (value) {
                           setState(() {
                             _dataSaver = value;
@@ -343,7 +352,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(value ? 'Data saver enabled' : 'Data saver disabled'),
-                              backgroundColor: AppColors.primary,
+                              backgroundColor: colorScheme.primary,
                             ),
                           );
                         },
@@ -353,14 +362,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(height: 25),
 
                     // App Settings
-                    _buildSectionTitle('App Settings', isDarkMode),
-                    _buildSettingsCard(isDarkMode: isDarkMode, children: [
+                    _buildSectionTitle('App Settings', colorScheme),
+                    _buildSettingsCard(theme: theme, children: [
                       _buildSwitchTile(
                         icon: Icons.notifications_outlined,
                         title: 'Push Notifications',
                         subtitle: 'Receive app notifications',
                         value: _notificationsEnabled,
-                        isDarkMode: isDarkMode,
+                        theme: theme,
                         onChanged: (value) {
                           setState(() {
                             _notificationsEnabled = value;
@@ -368,7 +377,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(value ? 'Notifications enabled' : 'Notifications disabled'),
-                              backgroundColor: AppColors.primary,
+                              backgroundColor: colorScheme.primary,
                             ),
                           );
                         },
@@ -379,7 +388,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         title: 'Dark Mode',
                         subtitle: 'Switch to dark theme',
                         value: _darkMode,
-                        isDarkMode: isDarkMode,
+                        theme: theme,
                         onChanged: (value) {
                           setState(() {
                             _darkMode = value;
@@ -388,7 +397,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(value ? 'Dark mode enabled' : 'Dark mode disabled'),
-                              backgroundColor: AppColors.primary,
+                              backgroundColor: colorScheme.primary,
                             ),
                           );
                         },
@@ -398,9 +407,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         icon: Icons.language,
                         title: 'Language',
                         subtitle: _language,
-                        isDarkMode: isDarkMode,
+                        theme: theme,
                         onTap: () {
-                          _showLanguageSelector(isDarkMode);
+                          _showLanguageSelector(theme);
                         },
                       ),
                     ]),
@@ -408,15 +417,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(height: 25),
 
                     // App Tour Section
-                    _buildSectionTitle('App Tour', isDarkMode),
-                    _buildSettingsCard(isDarkMode: isDarkMode, children: [
+                    _buildSectionTitle('App Tour', colorScheme),
+                    _buildSettingsCard(theme: theme, children: [
                       _buildSettingsTile(
                         icon: Icons.tour_outlined,
                         title: 'Take Tour Again',
                         subtitle: 'Restart the guided onboarding tour',
-                        isDarkMode: isDarkMode,
+                        theme: theme,
                         onTap: () {
-                          _showRestartTourDialog(isDarkMode);
+                          _showRestartTourDialog(theme);
                         },
                       ),
                     ]),
@@ -424,15 +433,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(height: 25),
 
                     // Support & About
-                    _buildSectionTitle('Support & About', isDarkMode),
-                    _buildSettingsCard(isDarkMode: isDarkMode, children: [
+                    _buildSectionTitle('Support & About', colorScheme),
+                    _buildSettingsCard(theme: theme, children: [
                       _buildSettingsTile(
                         icon: Icons.help_outline,
                         title: 'Help Center',
                         subtitle: 'Get help with TapMate',
-                        isDarkMode: isDarkMode,
+                        theme: theme,
                         onTap: () {
-                          _showHelpCenterDialog(isDarkMode);
+                          _showHelpCenterDialog(theme);
                         },
                       ),
                       const Divider(),
@@ -440,9 +449,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         icon: Icons.bug_report_outlined,
                         title: 'Report a Bug',
                         subtitle: 'Report issues or bugs',
-                        isDarkMode: isDarkMode,
+                        theme: theme,
                         onTap: () {
-                          _showBugReportDialog(isDarkMode);
+                          _showBugReportDialog(theme);
                         },
                       ),
                       const Divider(),
@@ -450,9 +459,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         icon: Icons.info_outline,
                         title: 'About TapMate',
                         subtitle: 'Version 1.0.0',
-                        isDarkMode: isDarkMode,
+                        theme: theme,
                         onTap: () {
-                          _showAboutDialog(isDarkMode);
+                          _showAboutDialog(theme);
                         },
                       ),
                     ]),
@@ -460,15 +469,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(height: 25),
 
                     // Clear Data Section
-                    _buildSectionTitle('Data Management', isDarkMode),
-                    _buildSettingsCard(isDarkMode: isDarkMode, children: [
+                    _buildSectionTitle('Data Management', colorScheme),
+                    _buildSettingsCard(theme: theme, children: [
                       _buildSettingsTile(
                         icon: Icons.delete_outline,
                         title: 'Clear Cache',
                         subtitle: 'Free up storage space',
-                        isDarkMode: isDarkMode,
+                        theme: theme,
                         onTap: () {
-                          _showClearCacheDialog(isDarkMode);
+                          _showClearCacheDialog(theme);
                         },
                       ),
                       const Divider(),
@@ -476,9 +485,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         icon: Icons.refresh,
                         title: 'Reset Settings',
                         subtitle: 'Restore default settings',
-                        isDarkMode: isDarkMode,
+                        theme: theme,
                         onTap: () {
-                          _showResetSettingsDialog(isDarkMode);
+                          _showResetSettingsDialog(theme);
                         },
                       ),
                     ]),
@@ -490,7 +499,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          _showLogoutDialog(isDarkMode);
+                          _showLogoutDialog(theme);
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red,
@@ -522,20 +531,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildUserInfoCard(bool isDarkMode) {
+  Widget _buildUserInfoCard(ThemeData theme, ColorScheme colorScheme) {
     final user = DummyDataService.currentUser;
 
     return Container(
       decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        color: theme.cardTheme.color ?? theme.cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.primary.withOpacity(0.2),
+          color: colorScheme.primary.withOpacity(0.2),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(isDarkMode ? 0.3 : 0.1),
+            color: Colors.grey.withOpacity(theme.brightness == Brightness.dark ? 0.3 : 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -555,25 +564,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 Text(
                   user['full_name'] ?? 'Your Name',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: isDarkMode ? Colors.white : AppColors.accent,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: colorScheme.primary,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   user['email'] ?? 'yourname@email.com',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
                   ),
                 ),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: colorScheme.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -581,7 +587,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
+                      color: colorScheme.primary,
                     ),
                   ),
                 ),
@@ -591,7 +597,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           IconButton(
             icon: Icon(
               Icons.edit_outlined,
-              color: AppColors.primary,
+              color: colorScheme.primary,
               size: 22,
             ),
             onPressed: () {
@@ -603,7 +609,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title, bool isDarkMode) {
+  Widget _buildSectionTitle(String title, ColorScheme colorScheme) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12, left: 4),
       child: Text(
@@ -611,24 +617,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
         style: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          color: isDarkMode ? Colors.white : AppColors.accent,
+          color: colorScheme.primary,
         ),
       ),
     );
   }
 
-  Widget _buildSettingsCard({required bool isDarkMode, required List<Widget> children}) {
+  Widget _buildSettingsCard({required ThemeData theme, required List<Widget> children}) {
     return Container(
       decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        color: theme.cardTheme.color ?? theme.cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!,
+          color: theme.dividerColor.withOpacity(0.3),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(isDarkMode ? 0.3 : 0.1),
+            color: Colors.grey.withOpacity(theme.brightness == Brightness.dark ? 0.3 : 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -642,42 +648,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required IconData icon,
     required String title,
     required String subtitle,
-    required bool isDarkMode,
+    required ThemeData theme,
     required VoidCallback onTap,
-    int badgeCount = 0, // NEW: Added badge count parameter
+    int badgeCount = 0,
   }) {
     return ListTile(
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.1),
+          color: theme.colorScheme.primary.withOpacity(0.1),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(icon, color: AppColors.primary, size: 22),
+        child: Icon(icon, color: theme.colorScheme.primary, size: 22),
       ),
       title: Text(
         title,
-        style: TextStyle(
-          fontSize: 15,
+        style: theme.textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.w600,
-          color: isDarkMode ? Colors.white : AppColors.accent,
+          color: theme.colorScheme.onSurface,
         ),
       ),
       subtitle: Text(
         subtitle,
-        style: TextStyle(
-          fontSize: 13,
-          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurface.withOpacity(0.7),
         ),
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (badgeCount > 0) // NEW: Show badge if count > 0
+          if (badgeCount > 0)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.red,
+                color: theme.colorScheme.error,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
@@ -692,7 +696,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(width: 8),
           Icon(
             Icons.chevron_right_rounded,
-            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+            color: theme.colorScheme.onSurface.withOpacity(0.5),
             size: 22,
           ),
         ],
@@ -707,42 +711,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required String title,
     required String subtitle,
     required bool value,
-    required bool isDarkMode,
+    required ThemeData theme,
     required ValueChanged<bool> onChanged,
   }) {
     return ListTile(
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.1),
+          color: theme.colorScheme.primary.withOpacity(0.1),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(icon, color: AppColors.primary, size: 22),
+        child: Icon(icon, color: theme.colorScheme.primary, size: 22),
       ),
       title: Text(
         title,
-        style: TextStyle(
-          fontSize: 15,
+        style: theme.textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.w600,
-          color: isDarkMode ? Colors.white : AppColors.accent,
+          color: theme.colorScheme.onSurface,
         ),
       ),
       subtitle: Text(
         subtitle,
-        style: TextStyle(
-          fontSize: 13,
-          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurface.withOpacity(0.7),
         ),
       ),
       trailing: Switch(
         value: value,
         onChanged: onChanged,
-        activeColor: AppColors.primary,
+        activeColor: theme.colorScheme.primary,
         trackColor: MaterialStateProperty.resolveWith((states) {
           if (states.contains(MaterialState.selected)) {
-            return AppColors.primary.withOpacity(0.5);
+            return theme.colorScheme.primary.withOpacity(0.5);
           }
-          return Colors.grey[300];
+          return theme.dividerColor;
         }),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -753,21 +755,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _showPendingRequestsDialog() {
     final pendingRequests = DummyDataService.pendingFollowRequests;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: _darkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        backgroundColor: theme.dialogBackgroundColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            Icon(Icons.group_add, color: AppColors.primary),
+            Icon(Icons.group_add, color: colorScheme.primary),
             const SizedBox(width: 10),
             Text(
               'Pending Follow Requests',
-              style: TextStyle(
-                color: _darkMode ? Colors.white : AppColors.accent,
-                fontWeight: FontWeight.bold,
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: colorScheme.onSurface,
               ),
             ),
           ],
@@ -775,8 +778,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         content: pendingRequests.isEmpty
             ? Text(
           'No pending follow requests.',
-          style: TextStyle(
-            color: _darkMode ? Colors.grey[300] : AppColors.accent,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: colorScheme.onSurface.withOpacity(0.7),
           ),
         )
             : SizedBox(
@@ -786,8 +789,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Text(
                 'You have ${pendingRequests.length} pending follow request(s).',
-                style: TextStyle(
-                  color: _darkMode ? Colors.grey[300] : AppColors.accent,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurface.withOpacity(0.7),
                 ),
               ),
               const SizedBox(height: 16),
@@ -821,7 +824,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text('Rejected ${request['full_name']}'),
-                            backgroundColor: Colors.red,
+                            backgroundColor: theme.colorScheme.error,
                           ),
                         );
                       },
@@ -835,7 +838,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: Text('Close'),
           ),
           if (pendingRequests.isNotEmpty)
             ElevatedButton(
@@ -846,7 +849,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   MaterialPageRoute(builder: (context) => const FollowRequestsScreen()),
                 );
               },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colorScheme.primary,
+              ),
               child: const Text('Manage All'),
             ),
         ],
@@ -854,51 +859,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // UPDATED: Privacy settings dialog with private account toggle
-  void _showPrivacySettingsDialog(bool isDarkMode) {
+  void _showPrivacySettingsDialog(ThemeData theme) {
+    final colorScheme = theme.colorScheme;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        backgroundColor: theme.dialogBackgroundColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           'Privacy Settings',
-          style: TextStyle(
-            color: isDarkMode ? Colors.white : AppColors.accent,
-            fontWeight: FontWeight.bold,
+          style: theme.textTheme.titleLarge?.copyWith(
+            color: colorScheme.onSurface,
           ),
         ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Private Account Toggle
               SwitchListTile(
                 title: Text(
                   'Private Account',
-                  style: TextStyle(color: isDarkMode ? Colors.white : AppColors.accent),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: colorScheme.onSurface,
+                  ),
                 ),
                 subtitle: Text(
                   _isPrivateAccount
                       ? 'Only approved followers can see your posts'
                       : 'Anyone can follow you and see your posts',
-                  style: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurface.withOpacity(0.7),
+                  ),
                 ),
                 value: _isPrivateAccount,
                 onChanged: _togglePrivateAccount,
-                activeColor: AppColors.primary,
+                activeColor: colorScheme.primary,
               ),
               const Divider(),
 
-              // Show Online Status
               SwitchListTile(
                 title: Text(
                   'Show Online Status',
-                  style: TextStyle(color: isDarkMode ? Colors.white : AppColors.accent),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: colorScheme.onSurface,
+                  ),
                 ),
                 subtitle: Text(
                   'Show when you\'re online',
-                  style: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurface.withOpacity(0.7),
+                  ),
                 ),
                 value: _showOnlineStatus,
                 onChanged: (value) {
@@ -906,19 +917,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _showOnlineStatus = value;
                   });
                 },
-                activeColor: AppColors.primary,
+                activeColor: colorScheme.primary,
               ),
               const Divider(),
 
-              // Allow Tagging
               SwitchListTile(
                 title: Text(
                   'Allow Tagging',
-                  style: TextStyle(color: isDarkMode ? Colors.white : AppColors.accent),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: colorScheme.onSurface,
+                  ),
                 ),
                 subtitle: Text(
                   'Allow others to tag you in posts',
-                  style: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurface.withOpacity(0.7),
+                  ),
                 ),
                 value: _allowTagging,
                 onChanged: (value) {
@@ -926,19 +940,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _allowTagging = value;
                   });
                 },
-                activeColor: AppColors.primary,
+                activeColor: colorScheme.primary,
               ),
               const Divider(),
 
-              // Allow Comments
               SwitchListTile(
                 title: Text(
                   'Allow Comments',
-                  style: TextStyle(color: isDarkMode ? Colors.white : AppColors.accent),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: colorScheme.onSurface,
+                  ),
                 ),
                 subtitle: Text(
                   'Allow comments on your posts',
-                  style: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurface.withOpacity(0.7),
+                  ),
                 ),
                 value: _allowComments,
                 onChanged: (value) {
@@ -946,19 +963,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _allowComments = value;
                   });
                 },
-                activeColor: AppColors.primary,
+                activeColor: colorScheme.primary,
               ),
               const Divider(),
 
-              // Show Activity
               SwitchListTile(
                 title: Text(
                   'Show Activity',
-                  style: TextStyle(color: isDarkMode ? Colors.white : AppColors.accent),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: colorScheme.onSurface,
+                  ),
                 ),
                 subtitle: Text(
                   'Show your likes and comments',
-                  style: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurface.withOpacity(0.7),
+                  ),
                 ),
                 value: _showActivity,
                 onChanged: (value) {
@@ -966,7 +986,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _showActivity = value;
                   });
                 },
-                activeColor: AppColors.primary,
+                activeColor: colorScheme.primary,
               ),
 
               // Privacy Info Box
@@ -974,17 +994,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 margin: const EdgeInsets.only(top: 16),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: _isPrivateAccount ? AppColors.primary.withOpacity(0.1) : Colors.grey[100],
+                  color: _isPrivateAccount ? colorScheme.primary.withOpacity(0.1) : colorScheme.surfaceVariant,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: _isPrivateAccount ? Colors.grey[300]! : AppColors.primary.withOpacity(0.3),
+                    color: _isPrivateAccount ? colorScheme.outline : colorScheme.primary.withOpacity(0.3),
                   ),
                 ),
                 child: Row(
                   children: [
                     Icon(
                       _isPrivateAccount ? Icons.lock : Icons.lock_open,
-                      color: _isPrivateAccount ? AppColors.primary : Colors.grey,
+                      color: _isPrivateAccount ? colorScheme.primary : colorScheme.onSurface.withOpacity(0.5),
                       size: 20,
                     ),
                     const SizedBox(width: 10),
@@ -993,9 +1013,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         _isPrivateAccount
                             ? 'When your account is private, only people you approve can see your posts and follow you.'
                             : 'When your account is public, anyone can see your posts and follow you.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: _isPrivateAccount ? AppColors.primary : Colors.grey[600],
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: _isPrivateAccount ? colorScheme.primary : colorScheme.onSurface.withOpacity(0.6),
                         ),
                       ),
                     ),
@@ -1017,40 +1036,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ========== EXISTING DIALOG METHODS ==========
 
-  void _showStorageDetails(bool isDarkMode) {
+  void _showStorageDetails(ThemeData theme) {
     final percentage = (_storageUsed / _storageTotal) * 100;
     final posts = DummyDataService.getUserPosts();
     final videosGB = (posts.length * 0.4);
     final cacheGB = 0.2;
+    final colorScheme = theme.colorScheme;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        backgroundColor: theme.dialogBackgroundColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           'Storage Usage',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: isDarkMode ? Colors.white : AppColors.accent,
+          style: theme.textTheme.titleLarge?.copyWith(
+            color: colorScheme.onSurface,
           ),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildStorageDetailRow('Videos', videosGB, isDarkMode),
-            _buildStorageDetailRow('App Cache', cacheGB, isDarkMode),
-            _buildStorageDetailRow('Other Data', 0.1, isDarkMode),
+            _buildStorageDetailRow('Videos', videosGB, theme),
+            _buildStorageDetailRow('App Cache', cacheGB, theme),
+            _buildStorageDetailRow('Other Data', 0.1, theme),
 
             const SizedBox(height: 20),
 
             // Progress bar
             LinearProgressIndicator(
               value: _storageUsed / _storageTotal,
-              backgroundColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+              backgroundColor: colorScheme.surfaceVariant,
+              valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
               minHeight: 10,
               borderRadius: BorderRadius.circular(5),
             ),
@@ -1062,17 +1080,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 Text(
                   'Available',
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                    fontSize: 13,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurface.withOpacity(0.7),
                   ),
                 ),
                 Text(
                   '${_storageTotal - _storageUsed} GB',
-                  style: TextStyle(
+                  style: theme.textTheme.bodyMedium?.copyWith(
                     color: Colors.green,
                     fontWeight: FontWeight.bold,
-                    fontSize: 14,
                   ),
                 ),
               ],
@@ -1084,7 +1100,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onPressed: () => Navigator.pop(context),
             child: Text(
               'Close',
-              style: TextStyle(color: AppColors.primary),
+              style: TextStyle(color: colorScheme.primary),
             ),
           ),
         ],
@@ -1092,7 +1108,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildStorageDetailRow(String label, double size, bool isDarkMode) {
+  Widget _buildStorageDetailRow(String label, double size, ThemeData theme) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -1100,17 +1116,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           Text(
             label,
-            style: TextStyle(
-              color: isDarkMode ? Colors.grey[300] : AppColors.accent,
-              fontSize: 14,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface,
             ),
           ),
           Text(
             '${size.toStringAsFixed(1)} GB',
-            style: TextStyle(
+            style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: AppColors.primary,
-              fontSize: 14,
+              color: theme.colorScheme.primary,
             ),
           ),
         ],
@@ -1118,21 +1132,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showBackupInfoDialog(bool isDarkMode) {
+  void _showBackupInfoDialog(ThemeData theme) {
+    final colorScheme = theme.colorScheme;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        backgroundColor: theme.dialogBackgroundColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            Icon(Icons.backup, color: AppColors.primary),
+            Icon(Icons.backup, color: colorScheme.primary),
             const SizedBox(width: 10),
             Text(
               'Backup Information',
-              style: TextStyle(
-                color: isDarkMode ? Colors.white : AppColors.accent,
-                fontWeight: FontWeight.bold,
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: colorScheme.onSurface,
               ),
             ),
           ],
@@ -1141,10 +1156,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildBackupInfoItem('Last Backup', _lastBackup, isDarkMode),
-            _buildBackupInfoItem('Backup Size', _backupSize, isDarkMode),
-            _buildBackupInfoItem('Items Backed Up', '${DummyDataService.getUserPosts().length} videos', isDarkMode),
-            _buildBackupInfoItem('Cloud Storage', '${_storageTotal} GB Total', isDarkMode),
+            _buildBackupInfoItem('Last Backup', _lastBackup, theme),
+            _buildBackupInfoItem('Backup Size', _backupSize, theme),
+            _buildBackupInfoItem('Items Backed Up', '${DummyDataService.getUserPosts().length} videos', theme),
+            _buildBackupInfoItem('Cloud Storage', '${_storageTotal} GB Total', theme),
           ],
         ),
         actions: [
@@ -1154,10 +1169,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              _performBackup(isDarkMode);
+              _performBackup(theme);
               Navigator.pop(context);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            style: ElevatedButton.styleFrom(backgroundColor: colorScheme.primary),
             child: const Text('Backup Now'),
           ),
         ],
@@ -1165,7 +1180,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildBackupInfoItem(String label, String value, bool isDarkMode) {
+  Widget _buildBackupInfoItem(String label, String value, ThemeData theme) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -1173,14 +1188,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           Text(
             label,
-            style: TextStyle(
-              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
           Text(
             value,
-            style: TextStyle(
-              color: isDarkMode ? Colors.white : AppColors.accent,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -1189,12 +1204,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _performBackup(bool isDarkMode) {
+  void _performBackup(ThemeData theme) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        backgroundColor: theme.dialogBackgroundColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1204,24 +1219,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
               width: 80,
               child: CircularProgressIndicator(
                 strokeWidth: 4,
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
               ),
             ),
             const SizedBox(height: 20),
             Text(
               'Creating Backup...',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: isDarkMode ? Colors.white : AppColors.accent,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 10),
             Text(
               'This may take a few moments',
-              style: TextStyle(
-                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                fontSize: 13,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
               ),
             ),
           ],
@@ -1246,23 +1258,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  void _showAutoBackupInfoDialog(bool isDarkMode) {
+  void _showAutoBackupInfoDialog(ThemeData theme) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        backgroundColor: theme.dialogBackgroundColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           'Auto Backup',
-          style: TextStyle(
-            color: isDarkMode ? Colors.white : AppColors.accent,
-            fontWeight: FontWeight.bold,
+          style: theme.textTheme.titleLarge?.copyWith(
+            color: theme.colorScheme.onSurface,
           ),
         ),
         content: Text(
           'When enabled, TapMate will automatically backup your videos and settings daily when connected to Wi-Fi.',
-          style: TextStyle(
-            color: isDarkMode ? Colors.grey[300] : AppColors.accent,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurface.withOpacity(0.7),
             height: 1.5,
           ),
         ),
@@ -1276,12 +1287,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showQualitySelector(bool isDarkMode) {
+  void _showQualitySelector(ThemeData theme) {
     final qualities = ['360p', '480p', '720p', '1080p'];
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+      backgroundColor: theme.dialogBackgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1292,39 +1303,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             Text(
               'Select Video Quality',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: isDarkMode ? Colors.white : AppColors.accent,
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: theme.colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 20),
-            ...qualities.map((quality) => _buildQualityOption(quality, isDarkMode)).toList(),
+            ...qualities.map((quality) => _buildQualityOption(quality, theme)).toList(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildQualityOption(String quality, bool isDarkMode) {
+  Widget _buildQualityOption(String quality, ThemeData theme) {
     final isSelected = _downloadQuality == quality;
     return ListTile(
       title: Text(
         quality,
-        style: TextStyle(
-          color: isDarkMode ? Colors.white : AppColors.accent,
-          fontSize: 16,
+        style: theme.textTheme.titleMedium?.copyWith(
+          color: theme.colorScheme.onSurface,
         ),
       ),
       subtitle: Text(
         _getQualityDescription(quality),
-        style: TextStyle(
-          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-          fontSize: 13,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurface.withOpacity(0.7),
         ),
       ),
       trailing: isSelected
-          ? Icon(Icons.check, color: AppColors.primary)
+          ? Icon(Icons.check, color: theme.colorScheme.primary)
           : null,
       onTap: () {
         setState(() {
@@ -1334,7 +1341,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Video quality set to $quality'),
-            backgroundColor: AppColors.primary,
+            backgroundColor: theme.colorScheme.primary,
           ),
         );
       },
@@ -1351,12 +1358,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  void _showStorageLocationSelector(bool isDarkMode) {
+  void _showStorageLocationSelector(ThemeData theme) {
     final locations = ['Phone Storage', 'SD Card', 'Cloud Storage'];
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+      backgroundColor: theme.dialogBackgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1367,39 +1374,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             Text(
               'Select Storage Location',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: isDarkMode ? Colors.white : AppColors.accent,
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: theme.colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 20),
-            ...locations.map((location) => _buildLocationOption(location, isDarkMode)).toList(),
+            ...locations.map((location) => _buildLocationOption(location, theme)).toList(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLocationOption(String location, bool isDarkMode) {
+  Widget _buildLocationOption(String location, ThemeData theme) {
     final isSelected = _storageLocation == location;
     return ListTile(
       title: Text(
         location,
-        style: TextStyle(
-          color: isDarkMode ? Colors.white : AppColors.accent,
-          fontSize: 16,
+        style: theme.textTheme.titleMedium?.copyWith(
+          color: theme.colorScheme.onSurface,
         ),
       ),
       subtitle: Text(
         _getLocationDescription(location),
-        style: TextStyle(
-          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-          fontSize: 13,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurface.withOpacity(0.7),
         ),
       ),
       trailing: isSelected
-          ? Icon(Icons.check, color: AppColors.primary)
+          ? Icon(Icons.check, color: theme.colorScheme.primary)
           : null,
       onTap: () {
         setState(() {
@@ -1409,7 +1412,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Storage location set to $location'),
-            backgroundColor: AppColors.primary,
+            backgroundColor: theme.colorScheme.primary,
           ),
         );
       },
@@ -1425,7 +1428,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  void _showLanguageSelector(bool isDarkMode) {
+  void _showLanguageSelector(ThemeData theme) {
     final languages = [
       {'name': 'English', 'code': 'en'},
       {'name': 'Spanish', 'code': 'es'},
@@ -1437,7 +1440,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+      backgroundColor: theme.dialogBackgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1448,32 +1451,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             Text(
               'Select Language',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: isDarkMode ? Colors.white : AppColors.accent,
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: theme.colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 20),
-            ...languages.map((lang) => _buildLanguageOption(lang['name']!, isDarkMode)).toList(),
+            ...languages.map((lang) => _buildLanguageOption(lang['name']!, theme)).toList(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLanguageOption(String language, bool isDarkMode) {
+  Widget _buildLanguageOption(String language, ThemeData theme) {
     final isSelected = _language == language;
     return ListTile(
       title: Text(
         language,
-        style: TextStyle(
-          color: isDarkMode ? Colors.white : AppColors.accent,
-          fontSize: 16,
+        style: theme.textTheme.titleMedium?.copyWith(
+          color: theme.colorScheme.onSurface,
         ),
       ),
       trailing: isSelected
-          ? Icon(Icons.check, color: AppColors.primary)
+          ? Icon(Icons.check, color: theme.colorScheme.primary)
           : null,
       onTap: () {
         setState(() {
@@ -1483,24 +1483,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Language set to $language'),
-            backgroundColor: AppColors.primary,
+            backgroundColor: theme.colorScheme.primary,
           ),
         );
       },
     );
   }
 
-  void _showEmailSettingsDialog(bool isDarkMode) {
+  void _showEmailSettingsDialog(ThemeData theme) {
+    final colorScheme = theme.colorScheme;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        backgroundColor: theme.dialogBackgroundColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           'Email Settings',
-          style: TextStyle(
-            color: isDarkMode ? Colors.white : AppColors.accent,
-            fontWeight: FontWeight.bold,
+          style: theme.textTheme.titleLarge?.copyWith(
+            color: colorScheme.onSurface,
           ),
         ),
         content: Column(
@@ -1509,28 +1510,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
             SwitchListTile(
               title: Text(
                 'Email Notifications',
-                style: TextStyle(color: isDarkMode ? Colors.white : AppColors.accent),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: colorScheme.onSurface,
+                ),
               ),
               subtitle: Text(
                 'Receive email updates',
-                style: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurface.withOpacity(0.7),
+                ),
               ),
               value: true,
               onChanged: (value) {},
-              activeColor: AppColors.primary,
+              activeColor: colorScheme.primary,
             ),
             SwitchListTile(
               title: Text(
                 'Marketing Emails',
-                style: TextStyle(color: isDarkMode ? Colors.white : AppColors.accent),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: colorScheme.onSurface,
+                ),
               ),
               subtitle: Text(
                 'Receive promotional emails',
-                style: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurface.withOpacity(0.7),
+                ),
               ),
               value: false,
               onChanged: (value) {},
-              activeColor: AppColors.primary,
+              activeColor: colorScheme.primary,
             ),
           ],
         ),
@@ -1544,29 +1553,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showClearCacheDialog(bool isDarkMode) {
+  void _showClearCacheDialog(ThemeData theme) {
+    final colorScheme = theme.colorScheme;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        backgroundColor: theme.dialogBackgroundColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            Icon(Icons.delete_outline, color: AppColors.primary),
+            Icon(Icons.delete_outline, color: colorScheme.primary),
             const SizedBox(width: 10),
             Text(
               'Clear Cache',
-              style: TextStyle(
-                color: isDarkMode ? Colors.white : AppColors.accent,
-                fontWeight: FontWeight.bold,
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: colorScheme.onSurface,
               ),
             ),
           ],
         ),
         content: Text(
           'This will clear temporary app data and free up 0.2 GB of storage. Your videos and settings will not be affected.',
-          style: TextStyle(
-            color: isDarkMode ? Colors.grey[300] : AppColors.accent,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: colorScheme.onSurface.withOpacity(0.7),
             height: 1.5,
           ),
         ),
@@ -1592,7 +1602,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               );
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            style: ElevatedButton.styleFrom(backgroundColor: colorScheme.primary),
             child: const Text('Clear'),
           ),
         ],
@@ -1600,29 +1610,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showResetSettingsDialog(bool isDarkMode) {
+  void _showResetSettingsDialog(ThemeData theme) {
+    final colorScheme = theme.colorScheme;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        backgroundColor: theme.dialogBackgroundColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.orange),
+            const Icon(Icons.warning_amber_rounded, color: Colors.orange),
             const SizedBox(width: 10),
             Text(
               'Reset Settings',
-              style: TextStyle(
-                color: isDarkMode ? Colors.white : AppColors.accent,
-                fontWeight: FontWeight.bold,
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: colorScheme.onSurface,
               ),
             ),
           ],
         ),
         content: Text(
           'This will reset all app settings to their default values. Your videos and account data will not be affected.',
-          style: TextStyle(
-            color: isDarkMode ? Colors.grey[300] : AppColors.accent,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: colorScheme.onSurface.withOpacity(0.7),
             height: 1.5,
           ),
         ),
@@ -1672,24 +1683,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  void _showHelpCenterDialog(bool isDarkMode) {
+  void _showHelpCenterDialog(ThemeData theme) {
     final faqs = [
       {'q': 'How to download videos?', 'a': 'Tap the floating button when playing any video'},
       {'q': 'How to save to cloud?', 'a': 'Enable cloud sync in settings'},
       {'q': 'Can I share downloaded videos?', 'a': 'Yes, through the social feed'},
       {'q': 'Is it free?', 'a': 'Yes, basic features are free'},
     ];
+    final colorScheme = theme.colorScheme;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        backgroundColor: theme.dialogBackgroundColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           'Help Center',
-          style: TextStyle(
-            color: isDarkMode ? Colors.white : AppColors.accent,
-            fontWeight: FontWeight.bold,
+          style: theme.textTheme.titleLarge?.copyWith(
+            color: colorScheme.onSurface,
           ),
         ),
         content: SizedBox(
@@ -1701,9 +1712,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               return ExpansionTile(
                 title: Text(
                   faqs[index]['q']!,
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.white : AppColors.accent,
-                    fontSize: 14,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: colorScheme.onSurface,
                   ),
                 ),
                 children: [
@@ -1711,8 +1721,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     padding: const EdgeInsets.all(16.0),
                     child: Text(
                       faqs[index]['a']!,
-                      style: TextStyle(
-                        color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurface.withOpacity(0.7),
                       ),
                     ),
                   ),
@@ -1731,17 +1741,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showBugReportDialog(bool isDarkMode) {
+  void _showBugReportDialog(ThemeData theme) {
+    final colorScheme = theme.colorScheme;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        backgroundColor: theme.dialogBackgroundColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           'Report a Bug',
-          style: TextStyle(
-            color: isDarkMode ? Colors.white : AppColors.accent,
-            fontWeight: FontWeight.bold,
+          style: theme.textTheme.titleLarge?.copyWith(
+            color: colorScheme.onSurface,
           ),
         ),
         content: Column(
@@ -1750,7 +1761,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             TextField(
               decoration: InputDecoration(
                 labelText: 'Subject',
-                labelStyle: TextStyle(color: isDarkMode ? Colors.grey[400] : AppColors.accent),
+                labelStyle: TextStyle(color: colorScheme.onSurface.withOpacity(0.7)),
                 border: const OutlineInputBorder(),
               ),
             ),
@@ -1759,7 +1770,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               maxLines: 4,
               decoration: InputDecoration(
                 labelText: 'Description',
-                labelStyle: TextStyle(color: isDarkMode ? Colors.grey[400] : AppColors.accent),
+                labelStyle: TextStyle(color: colorScheme.onSurface.withOpacity(0.7)),
                 border: const OutlineInputBorder(),
                 hintText: 'Describe the issue in detail...',
               ),
@@ -1781,7 +1792,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               );
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            style: ElevatedButton.styleFrom(backgroundColor: colorScheme.primary),
             child: const Text('Submit'),
           ),
         ],
@@ -1789,21 +1800,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showAboutDialog(bool isDarkMode) {
+  void _showAboutDialog(ThemeData theme) {
+    final colorScheme = theme.colorScheme;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        backgroundColor: theme.dialogBackgroundColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            Icon(Icons.info_outline, color: AppColors.primary),
+            Icon(Icons.info_outline, color: colorScheme.primary),
             const SizedBox(width: 10),
             Text(
               'About TapMate',
-              style: TextStyle(
-                color: isDarkMode ? Colors.white : AppColors.accent,
-                fontWeight: FontWeight.bold,
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: colorScheme.onSurface,
               ),
             ),
           ],
@@ -1814,27 +1826,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             Text(
               'Version: 1.0.0',
-              style: TextStyle(
-                color: isDarkMode ? Colors.grey[300] : AppColors.accent,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 10),
             Text(
               'TapMate - Your all-in-one video downloader and social platform. Download videos from YouTube, Instagram, TikTok and more, then share with friends!',
-              style: TextStyle(
-                color: isDarkMode ? Colors.grey[300] : AppColors.accent,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurface.withOpacity(0.7),
                 height: 1.5,
               ),
             ),
             const SizedBox(height: 15),
-            Divider(color: isDarkMode ? Colors.grey[700] : Colors.grey[300]),
+            Divider(color: colorScheme.outline),
             const SizedBox(height: 10),
             Text(
               'Developed with ❤️ by TapMate Team',
-              style: TextStyle(
-                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                fontSize: 13,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurface.withOpacity(0.6),
               ),
             ),
           ],
@@ -1849,29 +1860,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showLogoutDialog(bool isDarkMode) {
+  void _showLogoutDialog(ThemeData theme) {
+    final colorScheme = theme.colorScheme;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        backgroundColor: theme.dialogBackgroundColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            Icon(Icons.logout, color: Colors.red),
+            const Icon(Icons.logout, color: Colors.red),
             const SizedBox(width: 10),
             Text(
               'Log Out',
-              style: TextStyle(
-                color: isDarkMode ? Colors.white : AppColors.accent,
-                fontWeight: FontWeight.bold,
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: colorScheme.onSurface,
               ),
             ),
           ],
         ),
         content: Text(
           'Are you sure you want to log out? You can sign back in anytime.',
-          style: TextStyle(
-            color: isDarkMode ? Colors.grey[300] : AppColors.accent,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: colorScheme.onSurface.withOpacity(0.7),
             height: 1.5,
           ),
         ),
@@ -1880,7 +1892,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onPressed: () => Navigator.pop(context),
             child: Text(
               'Cancel',
-              style: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+              style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7)),
             ),
           ),
           ElevatedButton(
@@ -1902,24 +1914,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // Keep your existing _showRestartTourDialog method
-  void _showRestartTourDialog(bool isDarkMode) {
+  void _showRestartTourDialog(ThemeData theme) {
+    final colorScheme = theme.colorScheme;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        backgroundColor: theme.dialogBackgroundColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            Icon(Icons.tour_outlined, color: AppColors.primary, size: 28),
+            Icon(Icons.tour_outlined, color: colorScheme.primary, size: 28),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 'Take Tour Again',
-                style: TextStyle(
-                  color: isDarkMode ? Colors.white : AppColors.accent,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: colorScheme.onSurface,
                 ),
               ),
             ),
@@ -1927,9 +1938,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         content: Text(
           'This will restart the guided onboarding tour. You\'ll see highlights for all key features of TapMate.',
-          style: TextStyle(
-            color: isDarkMode ? Colors.grey[300] : AppColors.accent,
-            fontSize: 15,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: colorScheme.onSurface.withOpacity(0.7),
             height: 1.5,
           ),
         ),
@@ -1938,7 +1948,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onPressed: () => Navigator.pop(context),
             child: Text(
               'Cancel',
-              style: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+              style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7)),
             ),
           ),
           ElevatedButton(
@@ -1950,21 +1960,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 showDialog(
                   context: context,
                   builder: (ctx) => AlertDialog(
-                    backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                    backgroundColor: theme.dialogBackgroundColor,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     title: Row(
                       children: [
-                        const Icon(Icons.lock_outline, color: AppColors.primary),
+                        Icon(Icons.lock_outline, color: colorScheme.primary),
                         const SizedBox(width: 10),
-                        Text('Guests cannot take the tour', style: TextStyle(color: isDarkMode ? Colors.white : AppColors.accent)),
+                        Text('Guests cannot take the tour',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: colorScheme.onSurface,
+                            )),
                       ],
                     ),
                     content: Text(
                       'Create an account to see the full guided tour and learn how to use TapMate.',
-                      style: TextStyle(color: isDarkMode ? Colors.grey[300] : AppColors.accent),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurface.withOpacity(0.7),
+                      ),
                     ),
                     actions: [
-                      TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Maybe Later')),
+                      TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('Maybe Later')
+                      ),
                       ElevatedButton(
                         onPressed: () {
                           Navigator.pop(ctx);
@@ -1973,7 +1991,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             MaterialPageRoute(builder: (context) => const LoginScreen()),
                           );
                         },
-                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                        style: ElevatedButton.styleFrom(backgroundColor: colorScheme.primary),
                         child: const Text('Sign Up', style: TextStyle(color: Colors.white)),
                       ),
                     ],
@@ -1990,7 +2008,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: colorScheme.primary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -2008,4 +2026,3 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 }
-

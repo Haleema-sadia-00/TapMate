@@ -27,7 +27,7 @@ class _FormatSelectionDialogState extends State<FormatSelectionDialog> {
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.lightSurface,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
@@ -47,7 +47,7 @@ class _FormatSelectionDialogState extends State<FormatSelectionDialog> {
                   ),
                   child: const Icon(
                     Icons.video_settings,
-                    color: Colors.white,
+                    color: AppColors.lightSurface,
                     size: 24,
                   ),
                 ),
@@ -188,7 +188,7 @@ class _FormatSelectionDialogState extends State<FormatSelectionDialog> {
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
+                      foregroundColor: AppColors.lightSurface,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -277,7 +277,7 @@ class _FormatSelectionDialogState extends State<FormatSelectionDialog> {
             Icon(
               icon,
               size: 18,
-              color: isSelected ? Colors.white : Colors.grey[600],
+              color: isSelected ? AppColors.lightSurface : Colors.grey[600],
             ),
             const SizedBox(width: 6),
             Text(
@@ -285,7 +285,7 @@ class _FormatSelectionDialogState extends State<FormatSelectionDialog> {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? Colors.white : Colors.grey[700],
+                color: isSelected ? AppColors.lightSurface : Colors.grey[700],
               ),
             ),
           ],

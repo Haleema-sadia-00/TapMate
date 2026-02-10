@@ -11,7 +11,7 @@ class OnboardingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.lightSurface,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -30,7 +30,7 @@ class OnboardingScreen extends StatelessWidget {
                 ),
                 child: const Icon(
                   Icons.download_rounded,
-                  color: Colors.white,
+                  color: AppColors.lightSurface,
                   size: 50,
                 ),
               ),
@@ -48,7 +48,7 @@ class OnboardingScreen extends StatelessWidget {
                 "Download, Share & Connect",
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.black54,
+                  color: AppColors.textMain,
                 ),
               ),
               const SizedBox(height: 50),
@@ -108,7 +108,7 @@ class OnboardingScreen extends StatelessWidget {
                       child: Text(
                         "Get Started",
                         style: TextStyle(
-                          color: Colors.white,
+                          color: AppColors.lightSurface,
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
                         ),
@@ -135,7 +135,7 @@ class OnboardingScreen extends StatelessWidget {
                 child: const Text(
                   "Continue as Guest",
                   style: TextStyle(
-                    color: Colors.black,
+                    color: AppColors.textMain,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -169,14 +169,14 @@ class OnboardingScreen extends StatelessWidget {
                 title,
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: AppColors.textMain,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 subtitle,
                 style: const TextStyle(
-                  color: Colors.black54,
+                  color: AppColors.textMain,
                   fontSize: 14,
                 ),
               ),

@@ -135,7 +135,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         actions: [
           TextButton(
             onPressed: _saveChanges,
-            child: const Text('Save', style: TextStyle(color: Colors.white)),
+            child: const Text('Save', style: TextStyle(color: AppColors.lightSurface)),
           ),
         ],
       ),
@@ -162,7 +162,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         color: AppColors.primary,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.edit, color: Colors.white, size: 20),
+                      child: const Icon(Icons.edit, color: AppColors.lightSurface, size: 20),
                     ),
                   ),
                 ],
@@ -331,7 +331,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.secondary,
-                          foregroundColor: Colors.white,
+                          foregroundColor: AppColors.lightSurface,
                           minimumSize: const Size(double.infinity, 50),
                         ),
                       ),

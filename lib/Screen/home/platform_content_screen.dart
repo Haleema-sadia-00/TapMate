@@ -143,7 +143,7 @@ class _PlatformContentScreenState extends State<PlatformContentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.lightSurface,
       body: Stack(
         children: [
           SafeArea(
@@ -182,7 +182,7 @@ class _PlatformContentScreenState extends State<PlatformContentScreen> {
                         children: [
                           // Back Button - FIXED
                           IconButton(
-                            icon: const Icon(Icons.arrow_back, color: Colors.white),
+                            icon: const Icon(Icons.arrow_back, color: AppColors.lightSurface),
                             onPressed: () {
                               Navigator.pop(context); // Simple pop
                             },
@@ -200,22 +200,22 @@ class _PlatformContentScreenState extends State<PlatformContentScreen> {
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.15),
+                                  color: AppColors.lightSurface.withOpacity(0.15),
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
-                                    color: Colors.white.withOpacity(0.3),
+                                    color: AppColors.lightSurface.withOpacity(0.3),
                                     width: 1.5,
                                   ),
                                 ),
                                 child: const Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.home, color: Colors.white, size: 18),
+                                    Icon(Icons.home, color: AppColors.lightSurface, size: 18),
                                     SizedBox(width: 6),
                                     Text(
                                       'TapMate',
                                       style: TextStyle(
-                                        color: Colors.white,
+                                        color: AppColors.lightSurface,
                                         fontSize: 14,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -230,16 +230,16 @@ class _PlatformContentScreenState extends State<PlatformContentScreen> {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.15),
+                              color: AppColors.lightSurface.withOpacity(0.15),
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: Colors.white.withOpacity(0.3),
+                                color: AppColors.lightSurface.withOpacity(0.3),
                                 width: 2,
                               ),
                             ),
                             child: FaIcon(
                               widget.platformIcon,
-                              color: Colors.white,
+                              color: AppColors.lightSurface,
                               size: 24,
                             ),
                           ),
@@ -251,7 +251,7 @@ class _PlatformContentScreenState extends State<PlatformContentScreen> {
                         style: const TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: AppColors.lightSurface,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -259,7 +259,7 @@ class _PlatformContentScreenState extends State<PlatformContentScreen> {
                         'Browse and download content',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.white.withOpacity(0.9),
+                          color: AppColors.lightSurface.withOpacity(0.9),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -306,7 +306,7 @@ class _PlatformContentScreenState extends State<PlatformContentScreen> {
                               },
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: AppColors.lightSurface,
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
                                     color: isSelected
@@ -437,7 +437,7 @@ class _PlatformContentScreenState extends State<PlatformContentScreen> {
               child: FloatingActionButton.extended(
                 onPressed: _showStorageSelectionDialog,
                 backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.lightSurface,
                 elevation: 8,
                 icon: const Icon(Icons.download_rounded, size: 24),
                 label: const Text(

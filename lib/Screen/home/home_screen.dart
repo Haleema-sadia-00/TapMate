@@ -193,11 +193,11 @@ class _HomeScreenState extends State<HomeScreen> {
             width: 220,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.lightSurface,
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
+                  color: AppColors.textMain.withOpacity(0.15),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -212,7 +212,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: AppColors.textMain,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -220,7 +220,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   currentStep['message'],
                   style: const TextStyle(
                     fontSize: 13,
-                    color: Colors.black54,
+                    color: AppColors.textMain,
                     height: 1.4,
                   ),
                 ),
@@ -264,7 +264,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         _currentStep < _tutorialSteps.length - 1 ? 'Next' : 'Done',
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Colors.white,
+                          color: AppColors.lightSurface,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -287,7 +287,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: CustomPaint(
                   painter: BubbleArrowPainter(
                     direction: 'top',
-                    color: Colors.white,
+                    color: AppColors.lightSurface,
                   ),
                 ),
               ),
@@ -304,7 +304,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: CustomPaint(
                   painter: BubbleArrowPainter(
                     direction: 'bottom',
-                    color: Colors.white,
+                    color: AppColors.lightSurface,
                   ),
                 ),
               ),
@@ -321,7 +321,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: CustomPaint(
                   painter: BubbleArrowPainter(
                     direction: 'left',
-                    color: Colors.white,
+                    color: AppColors.lightSurface,
                   ),
                 ),
               ),
@@ -338,7 +338,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: CustomPaint(
                   painter: BubbleArrowPainter(
                     direction: 'right',
-                    color: Colors.white,
+                    color: AppColors.lightSurface,
                   ),
                 ),
               ),
@@ -352,12 +352,12 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : AppColors.lightSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           '$feature Locked 🔒',
           style: TextStyle(
-            color: isDarkMode ? Colors.white : AppColors.accent,
+            color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -392,7 +392,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Text(
                     'Maybe Later',
                     style: TextStyle(
-                      color: isDarkMode ? Colors.white : Colors.black87,
+                      color: isDarkMode ? AppColors.lightSurface : AppColors.textMain,
                     ),
                   ),
                 ),
@@ -410,7 +410,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   child: const Text(
                     'Sign Up Now',
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(color: AppColors.lightSurface),
                   ),
                 ),
               ),
@@ -447,7 +447,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final isDarkMode = themeProvider.isDarkMode;
 
     return Scaffold(
-      backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.white,
+      backgroundColor: AppColors.rosePink,
       body: Stack(
         children: [
           SafeArea(
@@ -498,7 +498,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         style: TextStyle(
                                           fontSize: 32,
                                           fontWeight: FontWeight.bold,
-                                          color: Colors.white,
+                                          color: AppColors.lightSurface,
                                           fontFamily: 'Roboto',
                                         ),
                                       ),
@@ -509,7 +509,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                           'Download and share videos from any platform',
                                           style: TextStyle(
                                             fontSize: 14,
-                                            color: Colors.white.withOpacity(0.9),
+                                            color: AppColors.lightSurface.withOpacity(0.9),
                                             fontWeight: FontWeight.w500,
                                             fontFamily: 'Roboto',
                                           ),
@@ -527,16 +527,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                       child: Container(
                                         padding: const EdgeInsets.all(10),
                                         decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.15),
+                                          color: AppColors.lightSurface.withOpacity(0.15),
                                           shape: BoxShape.circle,
                                           border: Border.all(
-                                            color: Colors.white.withOpacity(0.3),
+                                            color: AppColors.lightSurface.withOpacity(0.3),
                                             width: 2,
                                           ),
                                         ),
                                         child: const Icon(
                                           Icons.person_rounded,
-                                          color: Colors.white,
+                                          color: AppColors.lightSurface,
                                           size: 24,
                                         ),
                                       ),
@@ -547,18 +547,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                       child: Container(
                                         padding: const EdgeInsets.all(10),
                                         decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.15),
+                                          color: AppColors.lightSurface.withOpacity(0.15),
                                           shape: BoxShape.circle,
                                           border: Border.all(
-                                            color: Colors.white.withOpacity(0.3),
+                                            color: AppColors.lightSurface.withOpacity(0.3),
                                             width: 2,
                                           ),
                                         ),
                                         child: Stack(
                                           children: [
-                                            const Icon(
+                                            Icon(
                                               Icons.person_rounded,
-                                              color: Colors.white70,
+                                              color: AppColors.lightSurface,
                                               size: 24,
                                             ),
                                             Positioned(
@@ -566,7 +566,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                               top: -2,
                                               child: Icon(
                                                 Icons.lock,
-                                                color: Colors.white,
+                                                color: AppColors.lightSurface,
                                                 size: 12,
                                               ),
                                             ),
@@ -583,10 +583,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(20),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.15),
+                                  color: AppColors.lightSurface.withOpacity(0.15),
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
-                                    color: Colors.white.withOpacity(0.25),
+                                    color: AppColors.lightSurface.withOpacity(0.25),
                                     width: 1.5,
                                   ),
                                 ),
@@ -595,7 +595,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     Container(
                                       padding: const EdgeInsets.all(14),
                                       decoration: BoxDecoration(
-                                        color: Colors.white,
+                                        color: AppColors.lightSurface,
                                         borderRadius: BorderRadius.circular(16),
                                       ),
                                       child: const Icon(
@@ -614,7 +614,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.bold,
-                                              color: Colors.white,
+                                              color: AppColors.lightSurface,
                                               fontFamily: 'Roboto',
                                             ),
                                           ),
@@ -625,7 +625,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 : 'Tap the floating button to start',
                                             style: TextStyle(
                                               fontSize: 13,
-                                              color: Colors.white.withOpacity(0.8),
+                                              color: AppColors.lightSurface.withOpacity(0.8),
                                               fontFamily: 'Roboto',
                                             ),
                                           ),
@@ -732,7 +732,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           margin: const EdgeInsets.symmetric(horizontal: 20),
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                            color: isDarkMode ? const Color(0xFF1E1E1E) : AppColors.lightSurface,
                             borderRadius: BorderRadius.circular(20),
                             boxShadow: [
                               BoxShadow(
@@ -761,7 +761,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
-                                      color: isDarkMode ? Colors.white : AppColors.secondary,
+                                      color: isDarkMode ? AppColors.lightSurface : AppColors.secondary,
                                       fontFamily: 'Roboto',
                                     ),
                                   ),
@@ -798,7 +798,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Container(
                   height: 70,
                   decoration: BoxDecoration(
-                    color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                    color: isDarkMode ? const Color(0xFF1E1E1E) : AppColors.lightSurface,
                     boxShadow: [
                       BoxShadow(
                         color: Colors.grey.withOpacity(0.1),
@@ -843,7 +843,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
               },
               backgroundColor: isGuest ? Colors.grey :  AppColors.primary,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.lightSurface,
               elevation: 8,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -861,7 +861,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(2),
                         decoration: const BoxDecoration(
-                          color: Colors.white,
+                          color: AppColors.lightSurface,
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -904,7 +904,7 @@ class _HomeScreenState extends State<HomeScreen> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: isDarkMode ? Colors.white : AppColors.accent,
+              color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
               fontFamily: 'Roboto',
             ),
           ),
@@ -937,7 +937,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: isLocked ? Colors.grey[100] : Colors.white,
+            color: isLocked ? Colors.grey[100] : AppColors.lightSurface,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
@@ -1133,7 +1133,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: isDarkMode ? Colors.white : Colors.black87,
+                    color: isDarkMode ? AppColors.lightSurface : AppColors.textMain,
                     fontFamily: 'Roboto',
                   ),
                 ),
@@ -1281,7 +1281,7 @@ class BubbleArrowPainter extends CustomPainter {
 
     // Add subtle shadow
     final shadowPaint = Paint()
-      ..color = Colors.black.withOpacity(0.1)
+      ..color = AppColors.textMain.withOpacity(0.1)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
 

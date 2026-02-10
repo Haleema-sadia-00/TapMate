@@ -1,39 +1,33 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // --- PROFESSIONAL PALETTE ---
-  static const Color deepTeal = Color(0xFF0C3B2E);     // Primary
-  static const Color mutedGreen = Color(0xFF6D9773);   // Secondary
-  static const Color burntOrange = Color(0xFFB46617);  // Accent
-  static const Color softBeige = Color(0xFFF7F3E9);    // Light Background
-  static const Color charcoalInk = Color(0xFF1B263B);  // Dark Background
-  static const Color lightGray = Color(0xFFEAEAEA);    // Neutral surface
+  // --- CUSTOM PALETTE ---
+  static const Color dustyPink = Color(0xFFD4BFCD);   // Background
+  static const Color wineRed = Color(0xFF5E0B15);     // Primary
+  static const Color crimson = Color(0xFF90323D);     // Secondary
+  static const Color darkPlum = Color(0xFF4A0628);    // Accent / strong text
+  static const Color amber = Color(0xFFFAA613);       // Highlight / buttons
+  static const Color navyBlack = Color(0xFF00171F);
+  static const Color rosePink = Color(0xFFD4BFCD);
+// Dark mode background
 
   // --- BRANDING ---
-  static const Color primary = deepTeal;
-  static const Color secondary = mutedGreen;
-  static const Color accent = burntOrange;
+  static const Color primary = wineRed;
+  static const Color secondary = crimson;
+  static const Color accent = amber;
 
   // --- LIGHT MODE ---
-  static const Color lightBg = softBeige;              // Solid beige background
+  static const Color lightBg = dustyPink;
   static const Color lightSurface = Colors.white;
-  static const Color textMain = deepTeal;
+  static const Color textMain = darkPlum;
 
   // --- DARK MODE ---
-  static const Color darkBg = charcoalInk;
-  static const Color darkSurface = Color(0xFF243447);
-  static const Color textOnDark = softBeige;
+  static const Color darkBg = navyBlack;
+  static const Color darkSurface = Color(0xFF1E1E1E);
+  static const Color textOnDark = dustyPink;
 
-  // --- GRADIENTS (not used anymore, but kept for optional use) ---
-  static const Gradient sunsetGradient = LinearGradient(
-    colors: [burntOrange, mutedGreen],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
-
-  static const Gradient oceanGradient = LinearGradient(
-    colors: [deepTeal, mutedGreen],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
+  // --- EXTRA USAGE ---
+  static const Color tagColor = amber;       // For tags / chips
+  static const Color containerColor = wineRed; // For filled containers
+  static const Color headingColor = crimson; // For headings
 }

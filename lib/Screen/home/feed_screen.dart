@@ -274,7 +274,7 @@ class _FeedScreenState extends State<FeedScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(1),
                     decoration: BoxDecoration(
-                      color: isDarkMode ? Colors.black : Colors.white,
+                      color: isDarkMode ? AppColors.textMain : AppColors.lightSurface,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -320,7 +320,7 @@ class _FeedScreenState extends State<FeedScreen> {
               );
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            child: const Text('Sign Up', style: TextStyle(color: Colors.white)),
+            child: const Text('Sign Up', style: TextStyle(color: AppColors.lightSurface)),
           ),
         ],
       ),
@@ -336,7 +336,7 @@ class _FeedScreenState extends State<FeedScreen> {
     final isDarkMode = themeProvider.isDarkMode;
 
     return Scaffold(
-      backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.white,
+      backgroundColor: isDarkMode ? const Color(0xFF121212) : AppColors.lightSurface,
       body: SafeArea(
         child: Column(
           children: [
@@ -381,7 +381,7 @@ class _FeedScreenState extends State<FeedScreen> {
                             Text(
                               isGuest ? 'Community Feed' : 'Your Feed',
                               style: const TextStyle(
-                                color: Colors.white,
+                                color: AppColors.lightSurface,
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -408,7 +408,7 @@ class _FeedScreenState extends State<FeedScreen> {
                         children: [
                           if (!isGuest)
                             IconButton(
-                              icon: const Icon(Icons.search, color: Colors.white, size: 22),
+                              icon: const Icon(Icons.search, color: AppColors.lightSurface, size: 22),
                               onPressed: () {
                                 Navigator.pushNamed(context, '/search');
                               },
@@ -417,7 +417,7 @@ class _FeedScreenState extends State<FeedScreen> {
                           IconButton(
                             icon: Icon(
                               isGuest ? Icons.info_outline : Icons.add_circle_outline,
-                              color: Colors.white,
+                              color: AppColors.lightSurface,
                               size: 22,
                             ),
                             onPressed: () {
@@ -446,12 +446,12 @@ class _FeedScreenState extends State<FeedScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.lock_open, size: 14, color: Colors.white),
+                          const Icon(Icons.lock_open, size: 14, color: AppColors.lightSurface),
                           const SizedBox(width: 6),
                           const Text(
                             'Guest Mode',
                             style: TextStyle(
-                              color: Colors.white,
+                              color: AppColors.lightSurface,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
@@ -462,7 +462,7 @@ class _FeedScreenState extends State<FeedScreen> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: AppColors.lightSurface,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: const Text(
@@ -508,7 +508,7 @@ class _FeedScreenState extends State<FeedScreen> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: isDarkMode ? Colors.white : AppColors.accent,
+                          color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -539,7 +539,7 @@ class _FeedScreenState extends State<FeedScreen> {
               child: Container(
                 height: 70,
                 decoration: BoxDecoration(
-                  color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                  color: isDarkMode ? const Color(0xFF1E1E1E) : AppColors.lightSurface,
                   boxShadow: [
                     BoxShadow(
                       color: Colors.grey.withOpacity(0.1),
@@ -575,7 +575,7 @@ class _FeedScreenState extends State<FeedScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        color: isDarkMode ? const Color(0xFF1E1E1E) : AppColors.lightSurface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: AppColors.accent.withOpacity(0.1),
@@ -615,7 +615,7 @@ class _FeedScreenState extends State<FeedScreen> {
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: isDarkMode ? Colors.white : AppColors.accent,
+                            color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
                           ),
                         ),
                       ),
@@ -735,12 +735,12 @@ class _FeedScreenState extends State<FeedScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.6),
+                          color: AppColors.textMain.withOpacity(0.6),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
                           Icons.play_arrow,
-                          color: Colors.white,
+                          color: AppColors.lightSurface,
                           size: 40,
                         ),
                       ),
@@ -754,13 +754,13 @@ class _FeedScreenState extends State<FeedScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.7),
+                          color: AppColors.textMain.withOpacity(0.7),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           item['duration'],
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: AppColors.lightSurface,
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
@@ -781,7 +781,7 @@ class _FeedScreenState extends State<FeedScreen> {
                       child: Text(
                         item['platform'],
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.lightSurface,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
@@ -1007,7 +1007,7 @@ class _FeedScreenState extends State<FeedScreen> {
               );
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            child: const Text('Sign Up', style: TextStyle(color: Colors.white)),
+            child: const Text('Sign Up', style: TextStyle(color: AppColors.lightSurface)),
           ),
         ],
       ),
@@ -1059,7 +1059,7 @@ class _FeedScreenState extends State<FeedScreen> {
                 ),
                 child: const Text(
                   'Sign Up Free',
-                  style: TextStyle(color: Colors.white, fontSize: 16),
+                  style: TextStyle(color: AppColors.lightSurface, fontSize: 16),
                 ),
               ),
             ),

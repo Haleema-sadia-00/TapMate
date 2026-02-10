@@ -52,7 +52,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.lightSurface,
       body: SafeArea(
         child: Column(
           children: [
@@ -74,7 +74,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    icon: const Icon(Icons.arrow_back, color: AppColors.lightSurface),
                     onPressed: () => Navigator.pop(context),
                   ),
                   Expanded(
@@ -84,7 +84,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                         const Text(
                           'Comments',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: AppColors.lightSurface,
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
                           ),
@@ -92,7 +92,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                         Text(
                           '${_comments.length} comments',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
+                            color: AppColors.lightSurface.withOpacity(0.9),
                             fontSize: 12,
                           ),
                         ),
@@ -118,7 +118,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
             Container(
               padding: const EdgeInsets.all(15),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.lightSurface,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.grey.withOpacity(0.1),

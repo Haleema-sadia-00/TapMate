@@ -34,7 +34,7 @@ class _PlatformForgotPasswordScreenState extends State<PlatformForgotPasswordScr
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.lightSurface,
       body: SafeArea(
         child: Column(
           children: [
@@ -58,7 +58,7 @@ class _PlatformForgotPasswordScreenState extends State<PlatformForgotPasswordScr
                   Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        icon: const Icon(Icons.arrow_back, color: AppColors.lightSurface),
                         onPressed: () => Navigator.pop(context),
                       ),
                     ],
@@ -69,16 +69,16 @@ class _PlatformForgotPasswordScreenState extends State<PlatformForgotPasswordScr
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: AppColors.lightSurface.withOpacity(0.2),
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.3),
+                        color: AppColors.lightSurface.withOpacity(0.3),
                         width: 2,
                       ),
                     ),
                     child: Icon(
                       widget.platformIcon,
-                      color: Colors.white,
+                      color: AppColors.lightSurface,
                       size: 40,
                     ),
                   ),
@@ -88,7 +88,7 @@ class _PlatformForgotPasswordScreenState extends State<PlatformForgotPasswordScr
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: AppColors.lightSurface,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -96,7 +96,7 @@ class _PlatformForgotPasswordScreenState extends State<PlatformForgotPasswordScr
                   Text(
                     'Reset your ${widget.platformName} password',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
+                      color: AppColors.lightSurface.withOpacity(0.9),
                       fontSize: 14,
                     ),
                     textAlign: TextAlign.center,
@@ -180,7 +180,7 @@ class _PlatformForgotPasswordScreenState extends State<PlatformForgotPasswordScr
                                 child: Text(
                                   'Back to Sign In',
                                   style: TextStyle(
-                                    color: Colors.white,
+                                    color: AppColors.lightSurface,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 18,
                                   ),
@@ -274,13 +274,13 @@ class _PlatformForgotPasswordScreenState extends State<PlatformForgotPasswordScr
                                         width: 20,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.lightSurface),
                                         ),
                                       )
                                     : const Text(
                                         'Send Reset Link',
                                         style: TextStyle(
-                                          color: Colors.white,
+                                          color: AppColors.lightSurface,
                                           fontWeight: FontWeight.bold,
                                           fontSize: 18,
                                         ),

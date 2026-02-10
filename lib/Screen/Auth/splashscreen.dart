@@ -46,11 +46,11 @@ class _SplashScreenState extends State<SplashScreen> {
                 width: 150,
                 height: 150,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.lightSurface,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.4),
+                      color: AppColors.textMain.withOpacity(0.4),
                       blurRadius: 25,
                       offset: const Offset(0, 10),
                     ),
@@ -68,12 +68,12 @@ class _SplashScreenState extends State<SplashScreen> {
                 style: TextStyle(
                   fontSize: 42,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: AppColors.lightSurface,
                   letterSpacing: 2.0,
                   shadows: [
                     Shadow(
                       blurRadius: 15,
-                      color: Colors.black45,
+                      color: AppColors.textMain,
                       offset: Offset(3, 3),
                     ),
                   ],
@@ -84,13 +84,13 @@ class _SplashScreenState extends State<SplashScreen> {
                 'Download Videos from All Platforms',
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.white70,
+                  color: AppColors.lightSurface,
                   fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(height: 60),
               const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.lightSurface),
                 strokeWidth: 3,
               ),
             ],

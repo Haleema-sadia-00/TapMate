@@ -21,7 +21,7 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.lightSurface,
       body: SafeArea(
         child: Column(
           children: [
@@ -43,21 +43,21 @@ class ProfileScreen extends StatelessWidget {
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    icon: const Icon(Icons.arrow_back, color: AppColors.lightSurface),
                     onPressed: () => Navigator.pop(context),
                   ),
                   const Expanded(
                     child: Text(
                       'Profile',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AppColors.lightSurface,
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.more_vert, color: Colors.white),
+                    icon: const Icon(Icons.more_vert, color: AppColors.lightSurface),
                     onPressed: () {},
                   ),
                 ],
@@ -117,7 +117,7 @@ class ProfileScreen extends StatelessWidget {
                             child: const Text(
                               'Follow',
                               style: TextStyle(
-                                color: Colors.white,
+                                color: AppColors.lightSurface,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),

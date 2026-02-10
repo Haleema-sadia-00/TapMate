@@ -20,16 +20,16 @@ class _FollowingScreenState extends State<FollowingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.lightSurface,
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: AppColors.lightSurface),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Following',
           style: TextStyle(
-            color: Colors.white,
+            color: AppColors.lightSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -58,7 +58,7 @@ class _FollowingScreenState extends State<FollowingScreen> {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.lightSurface,
           borderRadius: BorderRadius.circular(15),
           boxShadow: [
             BoxShadow(
@@ -128,7 +128,7 @@ class _FollowingScreenState extends State<FollowingScreen> {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.grey[300],
-                foregroundColor: Colors.black,
+                foregroundColor: AppColors.textMain,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -167,7 +167,7 @@ class _FollowingScreenState extends State<FollowingScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
             ),
-            child: const Text('Unfollow', style: TextStyle(color: Colors.white)),
+            child: const Text('Unfollow', style: TextStyle(color: AppColors.lightSurface)),
           ),
         ],
       ),

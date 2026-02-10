@@ -151,7 +151,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
             ),
-            child: const Text('Download', style: TextStyle(color: Colors.white)),
+            child: const Text('Download', style: TextStyle(color: AppColors.lightSurface)),
           ),
         ],
       ),
@@ -161,7 +161,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.lightSurface,
         body: SafeArea(
           child: Column(
               children: [
@@ -169,7 +169,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.lightSurface,
             boxShadow: [
               BoxShadow(
                 color: Colors.grey.withOpacity(0.1),
@@ -297,7 +297,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       const SizedBox(height: 8),
                       RichText(
                         text: TextSpan(
-                          style: const TextStyle(color: Colors.black, fontSize: 14),
+                          style: const TextStyle(color: AppColors.textMain, fontSize: 14),
                           children: [
                             TextSpan(
                               text: _post['user_name'] ?? 'User',
@@ -362,7 +362,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AppColors.lightSurface,
                           border: Border(top: BorderSide(color: Colors.grey[300]!)),
                           ),
                           child: Row(
@@ -626,7 +626,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
               ),
-              child: const Text('Submit', style: TextStyle(color: Colors.white)),
+              child: const Text('Submit', style: TextStyle(color: AppColors.lightSurface)),
             ),
           ],
         ),

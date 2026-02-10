@@ -10,7 +10,7 @@ class PlatformSelectionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.lightSurface,
       body: Column(
         children: [
           // Gradient Header - REDUCED HEIGHT
@@ -36,14 +36,14 @@ class PlatformSelectionScreen extends StatelessWidget {
                     Row(
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+                          icon: const Icon(Icons.arrow_back, color: AppColors.lightSurface, size: 24),
                           onPressed: () => Navigator.pop(context),
                         ),
                         const Expanded(
                           child: Text(
                             'Select Platform',
                             style: TextStyle(
-                              color: Colors.white,
+                              color: AppColors.lightSurface,
                               fontWeight: FontWeight.bold,
                               fontSize: 22, // Slightly smaller
                             ),
@@ -58,7 +58,7 @@ class PlatformSelectionScreen extends StatelessWidget {
                         'Choose where to download from',
                         style: TextStyle(
                           fontSize: 15,
-                          color: Colors.white.withOpacity(0.9),
+                          color: AppColors.lightSurface.withOpacity(0.9),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -193,7 +193,7 @@ class PlatformSelectionScreen extends StatelessWidget {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.lightSurface,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(

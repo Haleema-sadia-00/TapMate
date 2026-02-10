@@ -163,7 +163,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(1),
                     decoration: BoxDecoration(
-                      color: isDarkMode ? Colors.black : Colors.white,
+                      color: isDarkMode ? AppColors.textMain : AppColors.lightSurface,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -197,7 +197,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
     final isDarkMode = themeProvider.isDarkMode;
 
     return Scaffold(
-      backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.white,
+      backgroundColor: isDarkMode ? const Color(0xFF121212) : AppColors.lightSurface,
       body: SafeArea(
         child: Column(
           children: [
@@ -238,7 +238,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
                         },
                         icon: const Icon(
                           Icons.arrow_back_ios_new_rounded,
-                          color: Colors.white,
+                          color: AppColors.lightSurface,
                           size: 22,
                         ),
                       ),
@@ -250,7 +250,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
                             style: const TextStyle(
                               fontSize: 26,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: AppColors.lightSurface,
                               letterSpacing: 0.5,
                             ),
                           ),
@@ -264,7 +264,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
                         },
                         icon: const Icon(
                           Icons.search,
-                          color: Colors.white,
+                          color: AppColors.lightSurface,
                           size: 26,
                         ),
                       ),
@@ -298,7 +298,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
                         },
                         selectedColor: AppColors.primary,
                         labelStyle: TextStyle(
-                          color: isSelected ? Colors.white : (isDarkMode ? Colors.white : AppColors.accent),
+                          color: isSelected ? AppColors.lightSurface : (isDarkMode ? AppColors.lightSurface : AppColors.accent),
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
@@ -326,7 +326,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
               child: Container(
                 height: 70,
                 decoration: BoxDecoration(
-                  color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                  color: isDarkMode ? const Color(0xFF1E1E1E) : AppColors.lightSurface,
                   boxShadow: [
                     BoxShadow(
                       color: Colors.grey.withOpacity(0.1),
@@ -365,7 +365,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
             decoration: BoxDecoration(
-              color: isDarkMode ? const Color(0xFF2C2C2C) : Colors.white,
+              color: isDarkMode ? const Color(0xFF2C2C2C) : AppColors.lightSurface,
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
@@ -390,7 +390,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
                       border: InputBorder.none,
                     ),
                     style: TextStyle(
-                      color: isDarkMode ? Colors.white : Colors.black,
+                      color: isDarkMode ? AppColors.lightSurface : AppColors.textMain,
                     ),
                     onSubmitted: (value) => _performSearch(value),
                   ),
@@ -419,7 +419,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: isDarkMode ? Colors.white : AppColors.accent,
+                    color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -469,7 +469,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: isDarkMode ? Colors.white : AppColors.accent,
+                    color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -509,7 +509,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
               decoration: BoxDecoration(
-                color: isDarkMode ? const Color(0xFF2C2C2C) : Colors.white,
+                color: isDarkMode ? const Color(0xFF2C2C2C) : AppColors.lightSurface,
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
@@ -534,7 +534,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
                         border: InputBorder.none,
                       ),
                       style: TextStyle(
-                        color: isDarkMode ? Colors.white : Colors.black,
+                        color: isDarkMode ? AppColors.lightSurface : AppColors.textMain,
                       ),
                       onSubmitted: (value) => _performSearch(value),
                     ),
@@ -574,7 +574,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF2C2C2C) : Colors.white,
+        color: isDarkMode ? const Color(0xFF2C2C2C) : AppColors.lightSurface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -596,7 +596,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: isDarkMode ? Colors.white : AppColors.accent,
+                  color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
                 ),
               ),
             ],
@@ -621,7 +621,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF2C2C2C) : Colors.white,
+        color: isDarkMode ? const Color(0xFF2C2C2C) : AppColors.lightSurface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -642,7 +642,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w600,
-                  color: isDarkMode ? Colors.white : AppColors.accent,
+                  color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
                 ),
               ),
               GestureDetector(
@@ -694,7 +694,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF2C2C2C) : Colors.white,
+        color: isDarkMode ? const Color(0xFF2C2C2C) : AppColors.lightSurface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -716,7 +716,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
-                  color: isDarkMode ? Colors.white : AppColors.accent,
+                  color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
                 ),
               ),
             ],
@@ -738,7 +738,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF2C2C2C) : Colors.white,
+        color: isDarkMode ? const Color(0xFF2C2C2C) : AppColors.lightSurface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -756,7 +756,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: isDarkMode ? Colors.white : AppColors.accent,
+              color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
             ),
           ),
           const SizedBox(height: 16),
@@ -786,7 +786,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
       decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF2C2C2C) : Colors.white,
+        color: isDarkMode ? const Color(0xFF2C2C2C) : AppColors.lightSurface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -853,13 +853,13 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.7),
+                      color: AppColors.textMain.withOpacity(0.7),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       video['duration'],
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.lightSurface,
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                       ),
@@ -878,7 +878,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
                   child: Text(
                     video['platform'] ?? 'Unknown',
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.lightSurface,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
@@ -899,7 +899,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: isDarkMode ? Colors.white : AppColors.accent,
+                    color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -982,7 +982,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
+                        foregroundColor: AppColors.lightSurface,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -1020,7 +1020,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
       width: 200,
       margin: const EdgeInsets.only(right: 15),
       decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF2C2C2C) : Colors.white,
+        color: isDarkMode ? const Color(0xFF2C2C2C) : AppColors.lightSurface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -1080,7 +1080,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: isDarkMode ? Colors.white : AppColors.accent,
+                    color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -1135,7 +1135,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
                           : () => _downloadContent(video),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
+                        foregroundColor: AppColors.lightSurface,
                         padding: const EdgeInsets.symmetric(vertical: 6),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -1160,7 +1160,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        color: isDarkMode ? const Color(0xFF1E1E1E) : AppColors.lightSurface,
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
@@ -1190,7 +1190,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: isDarkMode ? Colors.white : AppColors.accent,
+                        color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -1224,7 +1224,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+          color: isDarkMode ? const Color(0xFF1E1E1E) : AppColors.lightSurface,
           borderRadius: BorderRadius.circular(30),
           border: Border.all(color: AppColors.primary, width: 1),
           boxShadow: [
@@ -1274,7 +1274,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
             ),
             child: const Text(
               'Sign In',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: AppColors.lightSurface),
             ),
           ),
         ],
@@ -1307,7 +1307,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
             ),
-            child: const Text('Sign Up', style: TextStyle(color: Colors.white)),
+            child: const Text('Sign Up', style: TextStyle(color: AppColors.lightSurface)),
           ),
         ],
       ),
@@ -1347,7 +1347,7 @@ class _CategoryCard extends StatelessWidget {
       margin: const EdgeInsets.only(right: 15),
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        color: isDarkMode ? const Color(0xFF1E1E1E) : AppColors.lightSurface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -1370,7 +1370,7 @@ class _CategoryCard extends StatelessWidget {
             title,
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              color: isDarkMode ? Colors.white : AppColors.accent,
+              color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
             ),
             textAlign: TextAlign.center,
             maxLines: 1,

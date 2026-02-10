@@ -100,7 +100,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.lightSurface,
       body: SafeArea(
         child: Column(
           children: [
@@ -129,14 +129,14 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen>
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    icon: const Icon(Icons.arrow_back, color: AppColors.lightSurface),
                     onPressed: () => Navigator.pop(context),
                   ),
                   Expanded(
                     child: Text(
                       widget.userName,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.lightSurface,
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                       ),
@@ -145,7 +145,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen>
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.more_vert, color: Colors.white),
+                    icon: const Icon(Icons.more_vert, color: AppColors.lightSurface),
                     onPressed: () {
                       _showUserOptions();
                     },
@@ -264,7 +264,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen>
                                   child: Text(
                                     _isFollowing ? 'Following' : 'Follow',
                                     style: TextStyle(
-                                      color: _isFollowing ? Colors.black : Colors.white,
+                                      color: _isFollowing ? AppColors.textMain : AppColors.lightSurface,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -434,17 +434,17 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.7),
+                color: AppColors.textMain.withOpacity(0.7),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.favorite, size: 12, color: Colors.white),
+                  const Icon(Icons.favorite, size: 12, color: AppColors.lightSurface),
                   const SizedBox(width: 4),
                   Text(
                     _formatNumber(post['likes_count'] ?? 0),
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.lightSurface,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
@@ -480,10 +480,10 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen>
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.6),
+                color: AppColors.textMain.withOpacity(0.6),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.play_arrow, color: Colors.white, size: 30),
+              child: const Icon(Icons.play_arrow, color: AppColors.lightSurface, size: 30),
             ),
           ),
         ],
@@ -562,7 +562,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen>
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
             ),
-            child: const Text('Block', style: TextStyle(color: Colors.white)),
+            child: const Text('Block', style: TextStyle(color: AppColors.lightSurface)),
           ),
         ],
       ),
@@ -590,7 +590,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen>
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
             ),
-            child: const Text('Submit', style: TextStyle(color: Colors.white)),
+            child: const Text('Submit', style: TextStyle(color: AppColors.lightSurface)),
           ),
         ],
       ),

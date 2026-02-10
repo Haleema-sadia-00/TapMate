@@ -98,7 +98,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.textMain,
       body: SafeArea(
         child: Stack(
           fit: StackFit.expand,
@@ -114,7 +114,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                       Icon(
                         widget.userAvatar as IconData,
                         size: 100,
-                        color: Colors.white.withOpacity(0.8),
+                        color: AppColors.lightSurface.withOpacity(0.8),
                       )
                     else if (widget.userAvatar is String)
                       Text(
@@ -127,7 +127,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                       style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: AppColors.lightSurface,
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -135,7 +135,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                       _isVideoOff ? 'Video is off' : 'Video calling...',
                       style: TextStyle(
                         fontSize: 16,
-                        color: Colors.white.withOpacity(0.8),
+                        color: AppColors.lightSurface.withOpacity(0.8),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -144,7 +144,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: AppColors.lightSurface,
                       ),
                     ),
                   ],
@@ -160,7 +160,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                 width: 120,
                 height: 180,
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
+                  color: AppColors.textMain.withOpacity(0.7),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: AppColors.primary,
@@ -175,14 +175,14 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                       const Icon(
                         Icons.videocam_off,
                         size: 40,
-                        color: Colors.white,
+                        color: AppColors.lightSurface,
                       ),
                       const SizedBox(height: 10),
                       Text(
                         'You',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.white.withOpacity(0.8),
+                          color: AppColors.lightSurface.withOpacity(0.8),
                         ),
                       ),
                     ],
@@ -199,7 +199,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                     child: Icon(
                       Icons.person,
                       size: 60,
-                      color: Colors.white.withOpacity(0.8),
+                      color: AppColors.lightSurface.withOpacity(0.8),
                     ),
                   ),
                 ),
@@ -221,7 +221,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                       _buildControlButton(
                         icon: _isMuted ? Icons.mic_off : Icons.mic,
                         label: _isMuted ? 'Unmute' : 'Mute',
-                        backgroundColor: _isMuted ? Colors.red : Colors.white.withOpacity(0.2),
+                        backgroundColor: _isMuted ? Colors.red : AppColors.lightSurface.withOpacity(0.2),
                         onTap: _toggleMute,
                       ),
 
@@ -229,7 +229,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                       _buildControlButton(
                         icon: _isVideoOff ? Icons.videocam_off : Icons.videocam,
                         label: _isVideoOff ? 'Turn on' : 'Turn off',
-                        backgroundColor: _isVideoOff ? Colors.red : Colors.white.withOpacity(0.2),
+                        backgroundColor: _isVideoOff ? Colors.red : AppColors.lightSurface.withOpacity(0.2),
                         onTap: _toggleVideo,
                       ),
 
@@ -237,7 +237,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                       _buildControlButton(
                         icon: _isSpeakerOn ? Icons.volume_up : Icons.volume_off,
                         label: _isSpeakerOn ? 'Speaker' : 'Earpiece',
-                        backgroundColor: Colors.white.withOpacity(0.2),
+                        backgroundColor: AppColors.lightSurface.withOpacity(0.2),
                         onTap: _toggleSpeaker,
                       ),
 
@@ -245,7 +245,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                       _buildControlButton(
                         icon: Icons.cameraswitch,
                         label: 'Switch',
-                        backgroundColor: Colors.white.withOpacity(0.2),
+                        backgroundColor: AppColors.lightSurface.withOpacity(0.2),
                         onTap: _switchCamera,
                       ),
                     ],
@@ -265,7 +265,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                       ),
                       child: const Icon(
                         Icons.call_end,
-                        color: Colors.white,
+                        color: AppColors.lightSurface,
                         size: 30,
                       ),
                     ),
@@ -315,12 +315,12 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.5),
+                        color: AppColors.textMain.withOpacity(0.5),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
                         Icons.arrow_back,
-                        color: Colors.white,
+                        color: AppColors.lightSurface,
                         size: 24,
                       ),
                     ),
@@ -330,7 +330,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.5),
+                      color: AppColors.textMain.withOpacity(0.5),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
@@ -344,7 +344,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                         const Text(
                           'Good',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: AppColors.lightSurface,
                             fontSize: 12,
                           ),
                         ),
@@ -379,7 +379,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
             ),
             child: Icon(
               icon,
-              color: Colors.white,
+              color: AppColors.lightSurface,
               size: 28,
             ),
           ),
@@ -388,7 +388,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
         Text(
           label,
           style: const TextStyle(
-            color: Colors.white,
+            color: AppColors.lightSurface,
             fontSize: 12,
           ),
         ),
@@ -406,12 +406,12 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
         width: 50,
         height: 50,
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.5),
+          color: AppColors.textMain.withOpacity(0.5),
           shape: BoxShape.circle,
         ),
         child: Icon(
           icon,
-          color: Colors.white,
+          color: AppColors.lightSurface,
           size: 24,
         ),
       ),
@@ -425,17 +425,17 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
       builder: (context) => Container(
         padding: const EdgeInsets.all(20),
         decoration: const BoxDecoration(
-          color: Colors.black,
+          color: AppColors.textMain,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.record_voice_over, color: Colors.white),
+              leading: const Icon(Icons.record_voice_over, color: AppColors.lightSurface),
               title: const Text(
                 'Record Call',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: AppColors.lightSurface),
               ),
               onTap: () {
                 Navigator.pop(context);
@@ -448,10 +448,10 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.blur_on, color: Colors.white),
+              leading: const Icon(Icons.blur_on, color: AppColors.lightSurface),
               title: const Text(
                 'Blur Background',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: AppColors.lightSurface),
               ),
               onTap: () {
                 Navigator.pop(context);
@@ -464,10 +464,10 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.grid_view, color: Colors.white),
+              leading: const Icon(Icons.grid_view, color: AppColors.lightSurface),
               title: const Text(
                 'Grid View',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: AppColors.lightSurface),
               ),
               onTap: () {
                 Navigator.pop(context);
@@ -480,10 +480,10 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.info, color: Colors.white),
+              leading: const Icon(Icons.info, color: AppColors.lightSurface),
               title: const Text(
                 'Call Info',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: AppColors.lightSurface),
               ),
               onTap: () {
                 Navigator.pop(context);
@@ -500,10 +500,10 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.black,
+        backgroundColor: AppColors.textMain,
         title: const Text(
           'Call Information',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: AppColors.lightSurface),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -545,7 +545,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
           Text(
             value,
             style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.lightSurface,
               fontSize: 14,
               fontWeight: FontWeight.bold,
             ),

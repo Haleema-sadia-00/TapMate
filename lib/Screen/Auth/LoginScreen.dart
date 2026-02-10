@@ -17,6 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   bool _rememberMe = false;
   bool _isLoading = false;
+  String? _errorMessage;
 
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
@@ -24,57 +25,54 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _handleLogin() async {
     if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
 
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final result = await authProvider.loginWithEmailPassword(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
 
       setState(() => _isLoading = false);
 
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      authProvider.setLoggedIn(true);
-      authProvider.setGuestMode(false);
-      String userId = AuthProvider.generateUserIdFromEmail(_emailController.text);
-      authProvider.setUserInfo(userId: userId, email: _emailController.text);
+      if (result['success'] == true) {
+        if (_rememberMe) {
+          _saveCredentials();
+        }
 
-      if (_rememberMe) {
-        // Save login credentials locally
-        _saveCredentials();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message']),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      } else {
+        setState(() {
+          _errorMessage = result['message'];
+        });
       }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Login Successful"),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
     }
   }
 
   void _saveCredentials() {
-    // Implement local storage for credentials
     print("Credentials saved for: ${_emailController.text}");
   }
 
   void _handleSocialLogin(String platform) async {
     setState(() => _isLoading = true);
 
-    await Future.delayed(const Duration(seconds: 2));
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    await authProvider.socialLogin(platform);
 
     setState(() => _isLoading = false);
-
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    authProvider.setLoggedIn(true);
-    authProvider.setGuestMode(false);
-    authProvider.setUserInfo(
-      userId: "social_${platform.toLowerCase()}",
-      email: "user@$platform.com",
-    );
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -92,7 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F2F6),
+      backgroundColor: AppColors.rosePink,
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -108,12 +106,36 @@ class _LoginScreenState extends State<LoginScreen> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: IconButton(
-                    icon: const Icon(Icons.arrow_back, size: 28, color: Colors.black87),
+                    icon: const Icon(Icons.arrow_back, size: 28, color: AppColors.textMain),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ),
 
                 const SizedBox(height: 10),
+
+                // Error Message
+                if (_errorMessage != null)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 15),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error, color: Colors.red, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _errorMessage!,
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
 
                 // Logo
                 Container(
@@ -136,7 +158,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                   child: const Center(
-                    child: Icon(Icons.lock_open, color: Colors.white, size: 40),
+                    child: Icon(Icons.lock_open, color: AppColors.lightSurface, size: 40),
                   ),
                 ),
 
@@ -157,7 +179,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const Text(
                   "Sign in to your account",
                   style: TextStyle(
-                    color: Colors.black54,
+                    color: AppColors.textMain,
                     fontSize: 16,
                   ),
                 ),
@@ -168,10 +190,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextFormField(
                   controller: _emailController,
                   decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.email_outlined, color: Colors.black54),
+                    prefixIcon: const Icon(Icons.email_outlined, color: AppColors.textMain),
                     hintText: "Email Address",
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: AppColors.lightSurface,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -196,10 +218,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   controller: _passwordController,
                   obscureText: _obscurePassword,
                   decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.lock_outline, color: Colors.black54),
+                    prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textMain),
                     hintText: "Password",
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: AppColors.lightSurface,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -208,7 +230,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                        color: Colors.black54,
+                        color: AppColors.textMain,
                       ),
                       onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                     ),
@@ -236,11 +258,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         Checkbox(
                           value: _rememberMe,
                           onChanged: (value) => setState(() => _rememberMe = value ?? false),
-                          activeColor:  AppColors.primary,
+                          activeColor: AppColors.primary,
                         ),
                         const Text(
                           "Remember me",
-                          style: TextStyle(color: Colors.black87),
+                          style: TextStyle(color: AppColors.textMain),
                         ),
                       ],
                     ),
@@ -285,13 +307,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       height: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white,
+                        color: AppColors.lightSurface,
                       ),
                     )
                         : const Text(
                       "Sign In",
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AppColors.lightSurface,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -340,7 +362,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(width: 20),
                     _socialButton(
                       icon: Icons.apple,
-                      color: Colors.black,
+                      color: AppColors.textMain,
                       onTap: () => _handleSocialLogin("Apple"),
                     ),
                   ],
@@ -354,7 +376,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     const Text(
                       "Don't have an account? ",
-                      style: TextStyle(color: Colors.black87),
+                      style: TextStyle(color: AppColors.textMain),
                     ),
                     GestureDetector(
                       onTap: () {
@@ -391,7 +413,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: const Text(
                     "Continue as Guest",
                     style: TextStyle(
-                      color: Colors.black87,
+                      color: AppColors.textMain,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -424,4 +446,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-
