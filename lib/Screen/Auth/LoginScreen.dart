@@ -4,7 +4,7 @@ import 'package:tapmate/Screen/constants/app_colors.dart';
 import 'SignupScreen.dart';
 import 'resetpasswordScreen.dart';
 import '../home/home_screen.dart';
-import '../../auth_provider.dart';
+import '../../auth_provider.dart' as myAuth;  // ← IMPORTANT: alias with myAuth
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -30,7 +30,8 @@ class _LoginScreenState extends State<LoginScreen> {
         _errorMessage = null;
       });
 
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      // ← FIXED: using myAuth.AuthProvider
+      final authProvider = Provider.of<myAuth.AuthProvider>(context, listen: false);
       final result = await authProvider.loginWithEmailPassword(
         _emailController.text.trim(),
         _passwordController.text,
@@ -69,7 +70,8 @@ class _LoginScreenState extends State<LoginScreen> {
   void _handleSocialLogin(String platform) async {
     setState(() => _isLoading = true);
 
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    // ← FIXED: using myAuth.AuthProvider
+    final authProvider = Provider.of<myAuth.AuthProvider>(context, listen: false);
     await authProvider.socialLogin(platform);
 
     setState(() => _isLoading = false);
@@ -402,7 +404,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 // Guest Login
                 TextButton(
                   onPressed: () {
-                    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                    // ← FIXED: using myAuth.AuthProvider
+                    final authProvider = Provider.of<myAuth.AuthProvider>(context, listen: false);
                     authProvider.setGuestMode(true);
                     authProvider.setOnboardingCompleted(true);
                     Navigator.pushReplacement(

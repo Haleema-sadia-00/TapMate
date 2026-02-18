@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:tapmate/Screen/Auth/permissionscreen.dart';
 import 'package:tapmate/Screen/constants/app_colors.dart';
 import 'package:tapmate/auth_provider.dart';
+import 'package:tapmate/auth_provider.dart' as myAuth;
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -229,7 +230,7 @@ class _SignupScreenState extends State<SignupScreen> {
       _signupError = null;
     });
 
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final authProvider = Provider.of<myAuth.AuthProvider>(context, listen: false);
 
     final result = await authProvider.signUpWithEmailPassword(
       name: _nameController.text.trim(),

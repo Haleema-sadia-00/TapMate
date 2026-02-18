@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuth, User;
 import 'package:tapmate/Screen/constants/app_colors.dart';
+import 'package:tapmate/Screen/home/tour_screen.dart';
 import 'package:tapmate/Screen/utils/guide_manager.dart';
-import 'platform_selection_screen.dart';
-import '../../auth_provider.dart';
-import '../../theme_provider.dart';
-import 'package:tapmate/Screen/constants/app_colors.dart';
-
-
+import 'package:tapmate/Screen/home/platform_selection_screen.dart';
+import 'package:tapmate/auth_provider.dart' as myAuth;
+import 'package:tapmate/theme_provider.dart';
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -19,6 +19,17 @@ class _HomeScreenState extends State<HomeScreen> {
   // Variables for tutorial
   bool _showTutorial = false;
   int _currentStep = 0;
+  bool _isLoading = true;
+
+  // User data
+  Map<String, dynamic> _userData = {};
+  int _downloadsCount = 0;
+  String _storageUsed = '0 GB';
+  int _cloudUploads = 0;
+
+  // Firebase
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   List<Map<String, dynamic>> _tutorialSteps = [
     {
@@ -62,15 +73,47 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadUserData();
       _checkAndShowTutorial();
     });
   }
 
+  Future<void> _loadUserData() async {
+    try {
+      User? currentUser = _auth.currentUser;
+      if (currentUser != null) {
+        DocumentSnapshot userDoc = await _firestore
+            .collection('users')
+            .doc(currentUser.uid)
+            .get();
+
+        if (userDoc.exists) {
+          Map<String, dynamic> data = userDoc.data() as Map<String, dynamic>? ?? {};
+          setState(() {
+            _userData = data;
+            _downloadsCount = data['downloads_count'] ?? 247;
+            _storageUsed = data['storage_used'] ?? '2.4 GB';
+            _cloudUploads = data['cloud_uploads'] ?? 89;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading user data: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+// Top par import add karo
+
+
+// _checkAndShowTutorial method ko update karo:
+
   Future<void> _checkAndShowTutorial() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final authProvider = Provider.of<myAuth.AuthProvider>(context, listen: false);
 
     if (authProvider.isGuest) {
-      print('Guest user - No tutorial shown');
+      setState(() => _isLoading = false);
       return;
     }
 
@@ -81,20 +124,30 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (hasUserCompleted) {
       print('User has already seen tutorial - Skipping');
+      setState(() => _isLoading = false);
       return;
     }
 
     print('First-time user - Showing tutorial');
 
+    setState(() => _isLoading = false);
+
     // Wait for UI to render
-    await Future.delayed(const Duration(milliseconds: 1500));
+    await Future.delayed(const Duration(milliseconds: 500));
 
     if (!mounted) return;
 
-    setState(() {
-      _showTutorial = true;
-      _currentStep = 0;
-    });
+    // Show tour screen
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => TourScreen(
+        onComplete: () async {
+          Navigator.pop(context);
+          await _markTutorialCompleted();
+        },
+      ),
+    );
   }
 
   void _nextTutorialStep() {
@@ -117,7 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _markTutorialCompleted() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final authProvider = Provider.of<myAuth.AuthProvider>(context, listen: false);
     final userId = authProvider.userId;
 
     if (userId.isNotEmpty && userId != 'guest') {
@@ -138,43 +191,43 @@ class _HomeScreenState extends State<HomeScreen> {
     double arrowOffset = 20;
 
     switch (position) {
-      case 'top-right': // Profile icon ke liye - arrow BOTTOM se (same)
+      case 'top-right':
         top = 80;
         left = MediaQuery.of(context).size.width - 240;
         arrowPosition = 'bottom';
         arrowOffset = 30;
         break;
-      case 'top-center': // Download dashboard ke liye - arrow BOTTOM se (same)
+      case 'top-center':
         top = 150;
         left = MediaQuery.of(context).size.width / 2 - 110;
         arrowPosition = 'bottom';
         arrowOffset = 110;
         break;
-      case 'bottom-right': // Floating button ke liye - arrow LEFT se (CHANGED)
+      case 'bottom-right':
         top = MediaQuery.of(context).size.height - 180;
         left = MediaQuery.of(context).size.width - 240;
-        arrowPosition = 'left'; // ✅ YAHAN CHANGE: top -> left
+        arrowPosition = 'left';
         arrowOffset = 50;
         break;
-      case 'center': // Stats ke liye - arrow BOTTOM se (same)
+      case 'center':
         top = MediaQuery.of(context).size.height / 2 - 90;
         left = MediaQuery.of(context).size.width / 2 - 110;
         arrowPosition = 'bottom';
         arrowOffset = 110;
         break;
-      case 'center-left': // Library ke liye - arrow BOTTOM se (CHANGED)
+      case 'center-left':
         top = MediaQuery.of(context).size.height / 2 - 90;
         left = 20;
-        arrowPosition = 'bottom'; // ✅ YAHAN CHANGE: right -> bottom
+        arrowPosition = 'bottom';
         arrowOffset = 30;
         break;
-      case 'center-right': // Settings ke liye - arrow BOTTOM se (CHANGED)
+      case 'center-right':
         top = MediaQuery.of(context).size.height / 2 - 90;
         left = MediaQuery.of(context).size.width - 240;
-        arrowPosition = 'bottom'; // ✅ YAHAN CHANGE: left -> bottom
+        arrowPosition = 'bottom';
         arrowOffset = 30;
         break;
-      case 'bottom-center': // Navigation ke liye - arrow TOP se (same)
+      case 'bottom-center':
         top = MediaQuery.of(context).size.height - 150;
         left = MediaQuery.of(context).size.width / 2 - 110;
         arrowPosition = 'top';
@@ -185,168 +238,141 @@ class _HomeScreenState extends State<HomeScreen> {
     return Positioned(
       top: top,
       left: left,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // Main chat bubble
-          Container(
-            width: 220,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.lightSurface,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.textMain.withOpacity(0.15),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  currentStep['title'],
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textMain,
+      child: Material(
+        color: Colors.transparent,
+        elevation: 8,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 240,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.lightSurface,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  currentStep['message'],
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textMain,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    TextButton(
-                      onPressed: _skipTutorial,
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        minimumSize: Size.zero,
-                      ),
-                      child: const Text(
-                        'Skip',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${_currentStep + 1}/${_tutorialSteps.length}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
-                    Text(
-                      '${_currentStep + 1}/${_tutorialSteps.length}',
-                      style: const TextStyle(
-                        fontSize: 12,
+                      const Spacer(),
+                      IconButton(
+                        onPressed: _skipTutorial,
+                        icon: const Icon(Icons.close, size: 18),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                         color: Colors.grey,
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    currentStep['title'],
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textMain,
                     ),
-                    ElevatedButton(
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    currentStep['message'],
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textMain,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
                       onPressed: _nextTutorialStep,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                        foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        elevation: 2,
-                        minimumSize: Size.zero,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
                       ),
                       child: Text(
-                        _currentStep < _tutorialSteps.length - 1 ? 'Next' : 'Done',
+                        _currentStep < _tutorialSteps.length - 1 ? 'Next →' : 'Get Started!',
                         style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.lightSurface,
+                          fontSize: 13,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // Chat bubble arrow
-          if (arrowPosition == 'bottom')
-            Positioned(
-              bottom: -8,
-              left: arrowOffset,
-              child: Container(
-                width: 16,
-                height: 16,
-                color: Colors.transparent,
-                child: CustomPaint(
-                  painter: BubbleArrowPainter(
-                    direction: 'top',
-                    color: AppColors.lightSurface,
                   ),
-                ),
+                ],
               ),
             ),
 
-          if (arrowPosition == 'top')
-            Positioned(
-              top: -8,
-              left: arrowOffset,
-              child: Container(
-                width: 16,
-                height: 16,
-                color: Colors.transparent,
-                child: CustomPaint(
-                  painter: BubbleArrowPainter(
-                    direction: 'bottom',
-                    color: AppColors.lightSurface,
-                  ),
+            // Arrow
+            if (arrowPosition == 'bottom')
+              Positioned(
+                bottom: -8,
+                left: arrowOffset,
+                child: Icon(Icons.arrow_drop_down, size: 24, color: AppColors.lightSurface),
+              ),
+            if (arrowPosition == 'top')
+              Positioned(
+                top: -8,
+                left: arrowOffset,
+                child: Transform.rotate(
+                  angle: 3.14,
+                  child: Icon(Icons.arrow_drop_down, size: 24, color: AppColors.lightSurface),
                 ),
               ),
-            ),
-
-          if (arrowPosition == 'right')
-            Positioned(
-              right: -8,
-              top: arrowOffset,
-              child: Container(
-                width: 16,
-                height: 16,
-                color: Colors.transparent,
-                child: CustomPaint(
-                  painter: BubbleArrowPainter(
-                    direction: 'left',
-                    color: AppColors.lightSurface,
-                  ),
+            if (arrowPosition == 'left')
+              Positioned(
+                left: -8,
+                top: arrowOffset,
+                child: Transform.rotate(
+                  angle: 1.57,
+                  child: Icon(Icons.arrow_drop_down, size: 24, color: AppColors.lightSurface),
                 ),
               ),
-            ),
-
-          if (arrowPosition == 'left')
-            Positioned(
-              left: -8,
-              top: arrowOffset,
-              child: Container(
-                width: 16,
-                height: 16,
-                color: Colors.transparent,
-                child: CustomPaint(
-                  painter: BubbleArrowPainter(
-                    direction: 'right',
-                    color: AppColors.lightSurface,
-                  ),
+            if (arrowPosition == 'right')
+              Positioned(
+                right: -8,
+                top: arrowOffset,
+                child: Transform.rotate(
+                  angle: -1.57,
+                  child: Icon(Icons.arrow_drop_down, size: 24, color: AppColors.lightSurface),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
+
   // Helper method for guest users
   void showLockedFeatureDialog(BuildContext context, String feature, bool isDarkMode) {
     showDialog(
@@ -441,10 +467,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
+    final authProvider = Provider.of<myAuth.AuthProvider>(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isGuest = authProvider.isGuest;
     final isDarkMode = themeProvider.isDarkMode;
+
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: AppColors.rosePink,
+        body: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.rosePink,
@@ -478,7 +513,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color:  AppColors.accent.withOpacity(0.3),
+                                color: AppColors.accent.withOpacity(0.3),
                                 blurRadius: 20,
                                 offset: const Offset(0, 10),
                               ),
@@ -499,7 +534,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                           fontSize: 32,
                                           fontWeight: FontWeight.bold,
                                           color: AppColors.lightSurface,
-                                          fontFamily: 'Roboto',
                                         ),
                                       ),
                                       const SizedBox(height: 6),
@@ -511,7 +545,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                             fontSize: 14,
                                             color: AppColors.lightSurface.withOpacity(0.9),
                                             fontWeight: FontWeight.w500,
-                                            fontFamily: 'Roboto',
                                           ),
                                           maxLines: 2,
                                         ),
@@ -556,7 +589,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                         child: Stack(
                                           children: [
-                                            Icon(
+                                            const Icon(
                                               Icons.person_rounded,
                                               color: AppColors.lightSurface,
                                               size: 24,
@@ -615,7 +648,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                               fontSize: 16,
                                               fontWeight: FontWeight.bold,
                                               color: AppColors.lightSurface,
-                                              fontFamily: 'Roboto',
                                             ),
                                           ),
                                           const SizedBox(height: 4),
@@ -626,7 +658,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                             style: TextStyle(
                                               fontSize: 13,
                                               color: AppColors.lightSurface.withOpacity(0.8),
-                                              fontFamily: 'Roboto',
                                             ),
                                           ),
                                         ],
@@ -647,7 +678,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               _buildEqualStatCard(
                                 icon: Icons.download_done_rounded,
                                 title: 'Total Downloads',
-                                value: isGuest ? '0' : '247',
+                                value: isGuest ? '0' : _downloadsCount.toString(),
                                 color: AppColors.primary,
                                 isGuest: isGuest,
                               ),
@@ -655,16 +686,16 @@ class _HomeScreenState extends State<HomeScreen> {
                               _buildEqualStatCard(
                                 icon: Icons.storage_rounded,
                                 title: 'Storage Used',
-                                value: isGuest ? '0 GB' : '2.4 GB',
-                                color:  AppColors.secondary,
+                                value: isGuest ? '0 GB' : _storageUsed,
+                                color: AppColors.secondary,
                                 isGuest: isGuest,
                               ),
                               const SizedBox(width: 12),
                               _buildEqualStatCard(
                                 icon: Icons.cloud_upload_rounded,
                                 title: 'Cloud Uploads',
-                                value: isGuest ? '0' : '89',
-                                color:  AppColors.accent,
+                                value: isGuest ? '0' : _cloudUploads.toString(),
+                                color: AppColors.accent,
                                 isGuest: isGuest,
                                 isLocked: isGuest,
                               ),
@@ -684,7 +715,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                   fontSize: 22,
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.secondary,
-                                  fontFamily: 'Roboto',
                                 ),
                               ),
                               const SizedBox(height: 16),
@@ -695,7 +725,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       icon: Icons.video_library_rounded,
                                       label: 'Library',
                                       subtitle: 'Manage your downloads',
-                                      color:  AppColors.primary,
+                                      color: AppColors.primary,
                                       isLocked: isGuest,
                                       onTap: () {
                                         if (isGuest) {
@@ -712,7 +742,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       icon: Icons.settings_rounded,
                                       label: 'Settings',
                                       subtitle: 'App preferences',
-                                      color:  AppColors.secondary,
+                                      color: AppColors.secondary,
                                       isLocked: false,
                                       onTap: () {
                                         Navigator.pushNamed(context, '/settings');
@@ -728,6 +758,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(height: 25),
 
                         // Recent Downloads Section
+                        // Recent Downloads Section - FIXED VERSION
                         Container(
                           margin: const EdgeInsets.symmetric(horizontal: 20),
                           padding: const EdgeInsets.all(20),
@@ -741,20 +772,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                 offset: const Offset(0, 4),
                               ),
                             ],
-                            border: Border.all(
-                              color:  AppColors.accent.withOpacity(0.1),
-                            ),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
-                                  const Icon(
-                                    Icons.history_rounded,
-                                    color: AppColors.primary,
-                                    size: 24,
-                                  ),
+                                  const Icon(Icons.history_rounded, color: AppColors.primary, size: 24),
                                   const SizedBox(width: 10),
                                   Text(
                                     'Recent Downloads',
@@ -762,7 +786,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
                                       color: isDarkMode ? AppColors.lightSurface : AppColors.secondary,
-                                      fontFamily: 'Roboto',
                                     ),
                                   ),
                                 ],
@@ -772,7 +795,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 _buildEmptyState(
                                   icon: Icons.video_library_outlined,
                                   title: 'No downloads yet',
-                                  subtitle: 'Sign up to start downloading videos and build your library!',
+                                  subtitle: 'Sign up to start downloading videos!',
                                   isDarkMode: isDarkMode,
                                 )
                               else
@@ -806,9 +829,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         offset: const Offset(0, -2),
                       ),
                     ],
-                    border: Border.all(
-                      color: Colors.grey.withOpacity(0.1),
-                    ),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -828,7 +848,7 @@ class _HomeScreenState extends State<HomeScreen> {
           // Floating Action Button
           Positioned(
             right: 20,
-            bottom: 80,
+            bottom: 100,
             child: FloatingActionButton(
               onPressed: () {
                 if (isGuest) {
@@ -842,7 +862,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 }
               },
-              backgroundColor: isGuest ? Colors.grey :  AppColors.primary,
+              backgroundColor: isGuest ? Colors.grey : AppColors.primary,
               foregroundColor: AppColors.lightSurface,
               elevation: 8,
               shape: RoundedRectangleBorder(
@@ -855,20 +875,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     size: 28,
                   ),
                   if (isGuest)
-                    Positioned(
+                    const Positioned(
                       right: 0,
                       top: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: const BoxDecoration(
-                          color: AppColors.lightSurface,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.lock,
-                          size: 10,
-                          color: Colors.grey,
-                        ),
+                      child: Icon(
+                        Icons.lock,
+                        size: 12,
+                        color: Colors.white70,
                       ),
                     ),
                 ],
@@ -876,7 +889,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // Tutorial Dialog (Appears on top of everything)
+          // Tutorial Dialog
           _buildTutorialDialog(),
         ],
       ),
@@ -905,7 +918,6 @@ class _HomeScreenState extends State<HomeScreen> {
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
-              fontFamily: 'Roboto',
             ),
           ),
           const SizedBox(height: 8),
@@ -915,7 +927,6 @@ class _HomeScreenState extends State<HomeScreen> {
             style: TextStyle(
               fontSize: 14,
               color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-              fontFamily: 'Roboto',
             ),
           ),
         ],
@@ -947,7 +958,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
             border: Border.all(
-              color:  AppColors.accent.withOpacity(0.1),
+              color: AppColors.accent.withOpacity(0.1),
             ),
           ),
           child: Stack(
@@ -975,16 +986,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: isLocked ? Colors.grey : color,
-                      fontFamily: 'Roboto',
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     title,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 12,
                       color: Colors.grey,
-                      fontFamily: 'Roboto',
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -992,13 +1001,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               if (isLocked)
-                Positioned(
+                const Positioned(
                   top: 4,
                   right: 4,
                   child: Icon(
                     Icons.lock,
                     size: 14,
-                    color: Colors.grey[600],
+                    color: Colors.grey,
                   ),
                 ),
             ],
@@ -1067,7 +1076,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
                           color: isLocked ? Colors.grey : AppColors.secondary,
-                          fontFamily: 'Roboto',
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -1076,7 +1084,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey[600],
-                          fontFamily: 'Roboto',
                         ),
                       ),
                     ],
@@ -1085,13 +1092,13 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             if (isLocked)
-              Positioned(
+              const Positioned(
                 top: 8,
                 right: 8,
                 child: Icon(
                   Icons.lock,
                   size: 16,
-                  color: Colors.grey[600],
+                  color: Colors.grey,
                 ),
               ),
           ],
@@ -1114,12 +1121,12 @@ class _HomeScreenState extends State<HomeScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color:  AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               icon,
-              color:  AppColors.primary,
+              color: AppColors.primary,
               size: 20,
             ),
           ),
@@ -1134,15 +1141,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: isDarkMode ? AppColors.lightSurface : AppColors.textMain,
-                    fontFamily: 'Roboto',
                   ),
                 ),
                 Text(
                   size,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 12,
                     color: Colors.grey,
-                    fontFamily: 'Roboto',
                   ),
                 ),
               ],
@@ -1154,13 +1159,12 @@ class _HomeScreenState extends State<HomeScreen> {
               color: AppColors.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Text(
+            child: const Text(
               'Completed',
               style: TextStyle(
                 fontSize: 10,
-                color:  AppColors.primary,
+                color: AppColors.primary,
                 fontWeight: FontWeight.bold,
-                fontFamily: 'Roboto',
               ),
             ),
           ),
@@ -1210,13 +1214,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   size: 24,
                 ),
                 if (isDisabled)
-                  Positioned(
+                  const Positioned(
                     right: -4,
                     top: -4,
                     child: Icon(
                       Icons.lock,
                       size: 12,
-                      color: isDarkMode ? Colors.grey[500] : Colors.grey[700],
+                      color: Colors.grey,
                     ),
                   ),
               ],
@@ -1226,9 +1230,8 @@ class _HomeScreenState extends State<HomeScreen> {
               label,
               style: TextStyle(
                 fontSize: 12,
-                color: isActive ?  AppColors.primary : (isDarkMode ? Colors.grey[600] : Colors.grey),
+                color: isActive ? AppColors.primary : (isDarkMode ? Colors.grey[600] : Colors.grey),
                 fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                fontFamily: 'Roboto',
               ),
             ),
           ],
@@ -1237,59 +1240,3 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
-
-// ✅ SEPARATE CLASS FOR BUBBLE ARROW (FILE KE BAHAR ADD KARNA)
-class BubbleArrowPainter extends CustomPainter {
-  final String direction;
-  final Color color;
-
-  BubbleArrowPainter({required this.direction, required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
-    final path = Path();
-
-    switch (direction) {
-      case 'top': // Arrow points upward (at bottom of bubble)
-        path.moveTo(0, size.height);
-        path.lineTo(size.width / 2, 0);
-        path.lineTo(size.width, size.height);
-        break;
-      case 'bottom': // Arrow points downward (at top of bubble)
-        path.moveTo(0, 0);
-        path.lineTo(size.width / 2, size.height);
-        path.lineTo(size.width, 0);
-        break;
-      case 'left': // Arrow points leftward (at right of bubble)
-        path.moveTo(size.width, 0);
-        path.lineTo(0, size.height / 2);
-        path.lineTo(size.width, size.height);
-        break;
-      case 'right': // Arrow points rightward (at left of bubble)
-        path.moveTo(0, 0);
-        path.lineTo(size.width, size.height / 2);
-        path.lineTo(0, size.height);
-        break;
-    }
-
-    path.close();
-    canvas.drawPath(path, paint);
-
-    // Add subtle shadow
-    final shadowPaint = Paint()
-      ..color = AppColors.textMain.withOpacity(0.1)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-
-    canvas.drawPath(path, shadowPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-

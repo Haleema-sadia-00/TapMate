@@ -1,348 +1,308 @@
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:tapmate/Screen/services/dummy_data_service.dart';
-import 'package:tapmate/auth_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:tapmate/Screen/constants/app_colors.dart';
-
-// Local Theme Colors - Avoid confl32);
+import 'package:tapmate/auth_provider.dart' as myAuth;
 
 class EditProfileScreen extends StatefulWidget {
-  const EditProfileScreen({super.key});
+  final Map<String, dynamic>? userData;
+
+  const EditProfileScreen({super.key, this.userData});
 
   @override
   State<EditProfileScreen> createState() => _EditProfileScreenState();
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _bioController = TextEditingController();
-  bool _isPrivate = false;
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _nameController;
+  late TextEditingController _usernameController;
+  late TextEditingController _bioController;
+  late TextEditingController _phoneController;
+
+  bool _isLoading = false;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _loadUserData();
+    _nameController = TextEditingController(text: widget.userData?['name'] ?? '');
+    _usernameController = TextEditingController(text: widget.userData?['username'] ?? '');
+    _bioController = TextEditingController(text: widget.userData?['bio'] ?? '');
+    _phoneController = TextEditingController(text: widget.userData?['phone'] ?? '');
   }
 
-  void _loadUserData() {
-    final user = DummyDataService.currentUser;
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _usernameController.dispose();
+    _bioController.dispose();
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+
     setState(() {
-      _nameController.text = user['full_name'] ?? '';
-      _usernameController.text = user['username'] ?? '';
-      _bioController.text = user['bio'] ?? '';
-      _isPrivate = user['is_private'] ?? false;
+      _isLoading = true;
+      _error = null;
     });
-  }
 
-  void _saveChanges() {
-    // In real app, save to backend
-    // For dummy data, update locally
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Profile updated successfully')),
-    );
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('No user logged in');
 
-    // Show follow requests dialog if turning account private
-    if (_isPrivate && DummyDataService.getPendingFollowRequests().isNotEmpty) {
-      _showPendingRequestsDialog();
+      // Direct update - Firestore automatically handles missing fields
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'name': _nameController.text.trim(),
+        'username': _usernameController.text.trim(),
+        'bio': _bioController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'email': user.email,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true)); // ← YEH IMPORTANT HAI
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile updated successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
-
-    Navigator.pop(context);
   }
 
-  void _showPendingRequestsDialog() {
-    final pendingRequests = DummyDataService.getPendingFollowRequests();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Pending Follow Requests'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'You have ${pendingRequests.length} pending follow request(s).',
-                style: const TextStyle(color: Colors.grey),
-              ),
-              const SizedBox(height: 16),
-              ...pendingRequests.map((request) => ListTile(
-                leading: CircleAvatar(
-                  child: Text(request['avatar'] ?? '👤'),
-                ),
-                title: Text(request['full_name'] ?? 'Unknown'),
-                subtitle: Text('@${request['username'] ?? 'user'}'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.check, color: Colors.green),
-                      onPressed: () {
-                        // Accept follow request
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Accepted ${request['full_name'] ?? 'User'}')),
-                        );
-                      },
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.red),
-                      onPressed: () {
-                        // Reject follow request
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Rejected ${request['full_name'] ?? 'User'}')),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              )).toList(),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
+  String _getInitials(String name) {
+    if (name.isEmpty) return 'U';
+    List<String> parts = name.split(' ');
+    if (parts.length > 1) {
+      return parts[0][0] + parts[1][0];
+    }
+    return name[0];
   }
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final isGuest = authProvider.isGuest;
-
-    if (isGuest) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Edit Profile'),
-        ),
-        body: Center(
-          child: Text(
-            'Please sign in to edit profile',
-            style: TextStyle(color: Colors.grey[600]),
-          ),
-        ),
-      );
-    }
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      backgroundColor: isDarkMode ? const Color(0xFF121212) : AppColors.lightSurface,
       appBar: AppBar(
         title: const Text('Edit Profile'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: isDarkMode ? Colors.white : AppColors.textMain,
         actions: [
           TextButton(
-            onPressed: _saveChanges,
-            child: const Text('Save', style: TextStyle(color: AppColors.lightSurface)),
+            onPressed: _isLoading ? null : _saveProfile,
+            child: _isLoading
+                ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+                : const Text(
+              'Save',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+              ),
+            ),
           ),
         ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Profile Picture
-            Center(
-              child: Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 60,
-                    backgroundColor: AppColors.primary.withOpacity(0.1),
-                    backgroundImage: NetworkImage(DummyDataService.currentUser['profile_pic_url']),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              if (_error != null)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 20),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red),
                   ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.edit, color: AppColors.lightSurface, size: 20),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            Center(
-              child: const Text(
-                'Change Photo',
-                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500),
-              ),
-            ),
-            const SizedBox(height: 30),
-
-            // Name
-            const Text(
-              'Full Name',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                hintText: 'Enter your full name',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Username
-            const Text(
-              'Username',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _usernameController,
-              decoration: InputDecoration(
-                hintText: 'Enter username',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                prefixText: '@',
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Bio
-            const Text(
-              'Bio',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _bioController,
-              maxLines: 4,
-              decoration: InputDecoration(
-                hintText: 'Tell something about yourself...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-            const SizedBox(height: 30),
-
-            // PRIVACY SETTINGS SECTION
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey[200]!),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Privacy Settings',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.accent,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Private Account Toggle
-                  Row(
+                  child: Row(
                     children: [
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Private Account',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'Only approved followers can see your posts',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
+                      const Icon(Icons.error, color: Colors.red),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _error!,
+                          style: const TextStyle(color: Colors.red),
                         ),
-                      ),
-                      Switch(
-                        value: _isPrivate,
-                        onChanged: (value) {
-                          setState(() {
-                            _isPrivate = value;
-                          });
-                        },
-                        activeColor: AppColors.primary,
                       ),
                     ],
                   ),
+                ),
 
-                  const SizedBox(height: 12),
-
-                  // Privacy Info
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: _isPrivate ? AppColors.primary.withOpacity(0.1) : Colors.grey[100],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          _isPrivate ? Icons.lock : Icons.lock_open,
-                          color: _isPrivate ? AppColors.primary : Colors.grey,
+              Center(
+                child: Stack(
+                  children: [
+                    Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [AppColors.primary, AppColors.secondary],
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            _isPrivate
-                                ? 'Your account is private. New followers must request to follow you.'
-                                : 'Your account is public. Anyone can see your posts.',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: _isPrivate ? AppColors.primary : Colors.grey[600],
-                            ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Show pending requests button (if any)
-                  if (_isPrivate && DummyDataService.getPendingFollowRequests().isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 16),
-                      child: ElevatedButton.icon(
-                        onPressed: _showPendingRequestsDialog,
-                        icon: const Icon(Icons.group_add),
-                        label: Text(
-                          'View ${DummyDataService.getPendingFollowRequests().length} Pending Requests',
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.secondary,
-                          foregroundColor: AppColors.lightSurface,
-                          minimumSize: const Size(double.infinity, 50),
+                        ],
+                      ),
+                      child: Center(
+                        child: Text(
+                          _getInitials(_nameController.text),
+                          style: const TextStyle(
+                            fontSize: 48,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
-                ],
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 30),
+
+              TextFormField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  labelText: 'Full Name',
+                  prefixIcon: const Icon(Icons.person_outline),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: isDarkMode ? const Color(0xFF2C2C2C) : Colors.grey[50],
+                ),
+                style: TextStyle(
+                  color: isDarkMode ? Colors.white : AppColors.textMain,
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Name is required';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 15),
+
+              TextFormField(
+                controller: _usernameController,
+                decoration: InputDecoration(
+                  labelText: 'Username',
+                  prefixIcon: const Icon(Icons.alternate_email),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: isDarkMode ? const Color(0xFF2C2C2C) : Colors.grey[50],
+                ),
+                style: TextStyle(
+                  color: isDarkMode ? Colors.white : AppColors.textMain,
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Username is required';
+                  }
+                  if (value.contains(' ')) {
+                    return 'Username cannot contain spaces';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 15),
+
+              TextFormField(
+                controller: _bioController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  labelText: 'Bio',
+                  hintText: 'Tell us about yourself...',
+                  prefixIcon: const Icon(Icons.info_outline),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: isDarkMode ? const Color(0xFF2C2C2C) : Colors.grey[50],
+                ),
+                style: TextStyle(
+                  color: isDarkMode ? Colors.white : AppColors.textMain,
+                ),
+              ),
+              const SizedBox(height: 15),
+
+              TextFormField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  labelText: 'Phone Number',
+                  prefixIcon: const Icon(Icons.phone_outlined),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: isDarkMode ? const Color(0xFF2C2C2C) : Colors.grey[50],
+                ),
+                style: TextStyle(
+                  color: isDarkMode ? Colors.white : AppColors.textMain,
+                ),
+              ),
+              const SizedBox(height: 30),
+
+              Text(
+                'Your email cannot be changed',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDarkMode ? Colors.grey[500] : Colors.grey[600],
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
-
