@@ -10,7 +10,6 @@ import '../../theme_provider.dart';
 import 'package:tapmate/Screen/constants/app_colors.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 
-
 class ChatScreen extends StatefulWidget {
   final String? initialChatId;
   final String? initialUserId;
@@ -1217,9 +1216,10 @@ class _ChatScreenState extends State<ChatScreen>
                           builder: (context, snapshot) {
                             bool isOnline = false;
                             if (snapshot.hasData && snapshot.data!.exists) {
-                              var data = snapshot.data!.data() as Map<String, dynamic>?;
-                              if (data != null && data.containsKey('isOnline')) {
-                                isOnline = data['isOnline'] ?? false;
+                              var data = snapshot.data!.data();
+                              if (data != null) {
+                                Map<String, dynamic> userData = data as Map<String, dynamic>;
+                                isOnline = userData['isOnline'] ?? false;
                               }
                             }
                             return Text(

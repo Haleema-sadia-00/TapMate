@@ -8,7 +8,7 @@ import 'package:tapmate/Screen/constants/app_colors.dart';
 import 'package:tapmate/Screen/Auth/SignupScreen.dart';
 import 'package:tapmate/Screen/Auth/resetpasswordScreen.dart';
 import 'package:tapmate/Screen/home/home_screen.dart';
-import 'package:tapmate/auth_provider.dart'; // 👈 REMOVED 'as myAuth'
+import 'package:tapmate/auth_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -30,29 +30,13 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    _checkIfAlreadyLoggedIn();
     _loadSavedEmail();
   }
 
-  // 🔥 CHECK IF USER ALREADY LOGGED IN
-  Future<void> _checkIfAlreadyLoggedIn() async {
-    final prefs = await SharedPreferences.getInstance();
-    final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
-    final authProvider = Provider.of<AuthProvider>(context, listen: false); // 👈 FIXED
-
-    if (isLoggedIn && authProvider.isLoggedIn) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
-    }
-  }
-
-  // 🔥 LOAD SAVED EMAIL IF REMEMBER ME WAS CHECKED
   Future<void> _loadSavedEmail() async {
     try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false); // 👈 FIXED
-      final savedEmail = await authProvider.getSavedEmail(); // 👈 FIXED
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final savedEmail = await authProvider.getSavedEmail();
       if (savedEmail != null && savedEmail.isNotEmpty) {
         setState(() {
           _emailController.text = savedEmail;
@@ -64,8 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // 🔥 MAIN LOGIN HANDLER
-  void _handleLogin() async {
+  Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
@@ -73,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
       });
 
       try {
-        final authProvider = Provider.of<AuthProvider>(context, listen: false); // 👈 FIXED
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
         final result = await authProvider.loginWithEmailPassword(
           _emailController.text.trim(),
@@ -81,32 +64,36 @@ class _LoginScreenState extends State<LoginScreen> {
         );
 
         if (result['success'] == true) {
+          // Save login state
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('isLoggedIn', true);
 
+          // Save email if remember me checked
           if (_rememberMe) {
             await authProvider.saveUserEmail(_emailController.text.trim());
           } else {
-            await authProvider.clearSavedEmail(); // 👈 FIXED
+            await authProvider.clearSavedEmail();
           }
-
-          bool isNewUser = result['isNewUser'] ?? false;
 
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(result['message']),
+                content: Text('✅ Login successful!'),
                 backgroundColor: Colors.green,
               ),
             );
 
-            if (isNewUser) {
-              await prefs.setBool('isNewUser', true);
+            // 🔥 FIXED: Check if needs permission screen
+            bool needsPermission = await authProvider.needsPermissionScreen();
+
+            if (needsPermission) {
+              // New user - go to permission screen
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (_) => const PermissionScreen()),
               );
             } else {
+              // Existing user - go to home
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -132,7 +119,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // 🔥 GOOGLE LOGIN HANDLER
   Future<void> _handleGoogleLogin() async {
     setState(() {
       _isLoading = true;
@@ -140,22 +126,22 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false); // 👈 FIXED
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final result = await authProvider.signInWithGoogle();
 
       if (result['success'] == true) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('isLoggedIn', true);
 
-        bool isNewUser = result['isNewUser'] ?? false;
-
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Google sign in successful!'),
+              content: Text('✅ Google sign in successful!'),
               backgroundColor: Colors.green,
             ),
           );
+
+          bool isNewUser = result['isNewUser'] ?? false;
 
           if (isNewUser) {
             await prefs.setBool('isNewUser', true);
@@ -188,7 +174,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // 🔥 FACEBOOK LOGIN HANDLER
   Future<void> _handleFacebookLogin() async {
     setState(() {
       _isLoading = true;
@@ -196,22 +181,22 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false); // 👈 FIXED
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final result = await authProvider.signInWithFacebook();
 
       if (result['success'] == true) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('isLoggedIn', true);
 
-        bool isNewUser = result['isNewUser'] ?? false;
-
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Facebook sign in successful!'),
+              content: Text('✅ Facebook sign in successful!'),
               backgroundColor: Colors.green,
             ),
           );
+
+          bool isNewUser = result['isNewUser'] ?? false;
 
           if (isNewUser) {
             await prefs.setBool('isNewUser', true);
@@ -244,10 +229,9 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // 🔥 GUEST LOGIN HANDLER
   void _handleGuestLogin() {
     try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false); // 👈 FIXED
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
       authProvider.setGuestMode(true);
       authProvider.setOnboardingCompleted(true);
 
@@ -348,7 +332,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
 
                 const SizedBox(height: 5),
-
                 const Text(
                   "Sign in to your account",
                   style: TextStyle(
@@ -374,12 +357,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return "Email is required";
-                    }
-                    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
-                      return "Invalid email format";
-                    }
+                    if (value == null || value.isEmpty) return "Email is required";
+                    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) return "Invalid email format";
                     return null;
                   },
                 ),
@@ -409,23 +388,18 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return "Password is required";
-                    }
-                    if (value.length < 6) {
-                      return "Password must be at least 6 characters";
-                    }
+                    if (value == null || value.isEmpty) return "Password is required";
+                    if (value.length < 6) return "Password must be at least 6 characters";
                     return null;
                   },
                 ),
 
                 const SizedBox(height: 10),
 
-                // Remember Me & Forgot Password Row
+                // Remember Me & Forgot Password
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Remember Me
                     Row(
                       children: [
                         Checkbox(
@@ -433,27 +407,17 @@ class _LoginScreenState extends State<LoginScreen> {
                           onChanged: (value) => setState(() => _rememberMe = value ?? false),
                           activeColor: AppColors.primary,
                         ),
-                        const Text(
-                          "Remember me",
-                          style: TextStyle(color: AppColors.textMain),
-                        ),
+                        const Text("Remember me", style: TextStyle(color: AppColors.textMain)),
                       ],
                     ),
-
-                    // Forgot Password
                     GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const ResetPasswordScreen()),
-                        );
-                      },
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ResetPasswordScreen()),
+                      ),
                       child: const Text(
                         "Forgot Password?",
-                        style: TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
@@ -472,7 +436,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      elevation: 0,
                     ),
                     child: _isLoading
                         ? const SizedBox(
@@ -499,25 +462,18 @@ class _LoginScreenState extends State<LoginScreen> {
                 // Divider
                 Row(
                   children: [
-                    Expanded(
-                      child: Divider(color: Colors.grey[300]),
-                    ),
+                    Expanded(child: Divider(color: Colors.grey[300])),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Text(
-                        "Or continue with",
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
+                      child: Text("Or continue with", style: TextStyle(color: Colors.grey[600])),
                     ),
-                    Expanded(
-                      child: Divider(color: Colors.grey[300]),
-                    ),
+                    Expanded(child: Divider(color: Colors.grey[300])),
                   ],
                 ),
 
                 const SizedBox(height: 20),
 
-                // Social Login Buttons
+                // Social Buttons
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -532,19 +488,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: Colors.blue,
                       onTap: _handleFacebookLogin,
                     ),
-                    const SizedBox(width: 20),
-                    _socialButton(
-                      icon: Icons.apple,
-                      color: AppColors.textMain,
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Apple login coming soon!"),
-                            duration: Duration(seconds: 1),
-                          ),
-                        );
-                      },
-                    ),
                   ],
                 ),
 
@@ -554,17 +497,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
-                      "Don't have an account? ",
-                      style: TextStyle(color: AppColors.textMain),
-                    ),
+                    const Text("Don't have an account? ", style: TextStyle(color: AppColors.textMain)),
                     GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const SignupScreen()),
-                        );
-                      },
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SignupScreen()),
+                      ),
                       child: const Text(
                         "Sign Up",
                         style: TextStyle(
@@ -584,10 +522,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: _handleGuestLogin,
                   child: const Text(
                     "Continue as Guest",
-                    style: TextStyle(
-                      color: AppColors.textMain,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(color: AppColors.textMain, fontWeight: FontWeight.bold),
                   ),
                 ),
 
@@ -611,9 +546,7 @@ class _LoginScreenState extends State<LoginScreen> {
           color: color.withOpacity(0.1),
           border: Border.all(color: color.withOpacity(0.3)),
         ),
-        child: Center(
-          child: Icon(icon, color: color, size: 24),
-        ),
+        child: Center(child: Icon(icon, color: color, size: 24)),
       ),
     );
   }

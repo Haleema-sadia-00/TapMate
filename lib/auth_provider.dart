@@ -32,38 +32,63 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _checkCurrentUser() async {
-    User? user = _auth.currentUser;
-    if (user != null) {
-      _userId = user.uid;
-      _userEmail = user.email ?? '';
-      _userName = user.displayName ?? '';
-      _isLoggedIn = true;
-      _isGuest = false;
-      notifyListeners();
+    try {
+      User? user = _auth.currentUser;
+      if (user != null) {
+        _userId = user.uid;
+        _userEmail = user.email ?? '';
+        _userName = user.displayName ?? '';
+        _isLoggedIn = true;
+        _isGuest = false;
+
+        // Check if user is new (hasn't completed onboarding/permissions)
+        await _checkIfNewUser(user.uid);
+
+        notifyListeners();
+      }
+    } catch (e) {
+      print('Error checking current user: $e');
+    }
+  }
+
+  Future<void> _checkIfNewUser(String uid) async {
+    try {
+      DocumentSnapshot userDoc = await _firestore.collection('users').doc(uid).get();
+      if (userDoc.exists) {
+        Map<String, dynamic> data = userDoc.data() as Map<String, dynamic>;
+        _isNewSignUp = data['isNewUser'] ?? false;
+      }
+    } catch (e) {
+      print('Error checking if new user: $e');
     }
   }
 
   Future<void> _loadAuthState() async {
-    final prefs = await SharedPreferences.getInstance();
-    _isGuest = prefs.getBool('is_guest') ?? false;
-    _isLoggedIn = prefs.getBool('is_logged_in') ?? false;
-    _hasCompletedOnboarding = prefs.getBool('has_completed_onboarding') ?? false;
-    _userId = prefs.getString('user_id') ?? '';
-    _userEmail = prefs.getString('user_email') ?? '';
-    _userName = prefs.getString('user_name') ?? '';
-    _isNewSignUp = prefs.getBool('is_new_signup') ?? false;
-    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _isGuest = prefs.getBool('is_guest') ?? false;
+      _isLoggedIn = prefs.getBool('is_logged_in') ?? false;
+      _hasCompletedOnboarding = prefs.getBool('has_completed_onboarding') ?? false;
+      _userId = prefs.getString('user_id') ?? '';
+      _userEmail = prefs.getString('user_email') ?? '';
+      _userName = prefs.getString('user_name') ?? '';
+      _isNewSignUp = prefs.getBool('is_new_signup') ?? false;
+      notifyListeners();
+    } catch (e) {
+      print('Error loading auth state: $e');
+    }
   }
 
   // 🔥 CHECK IF USERNAME EXISTS
   Future<bool> checkUsernameExists(String username) async {
     try {
+      if (username.isEmpty) return false;
+
       QuerySnapshot snapshot = await _firestore
           .collection('users')
-          .where('username', isEqualTo: username)
+          .where('username', isEqualTo: username.toLowerCase().trim())
           .limit(1)
           .get();
-
       return snapshot.docs.isNotEmpty;
     } catch (e) {
       print('Error checking username: $e');
@@ -71,7 +96,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // 🔥 GET SAVED EMAIL (FOR REMEMBER ME)
+  // 🔥 GET SAVED EMAIL (REMEMBER ME)
   Future<String?> getSavedEmail() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -82,11 +107,11 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // 🔥 SAVE USER EMAIL (REMEMBER ME)
+  // 🔥 SAVE USER EMAIL
   Future<void> saveUserEmail(String email) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('saved_email', email);
+      await prefs.setString('saved_email', email.trim());
     } catch (e) {
       print('Error saving email: $e');
     }
@@ -117,70 +142,106 @@ class AuthProvider extends ChangeNotifier {
   // 🔥 FIREBASE LOGIN METHOD
   Future<Map<String, dynamic>> loginWithEmailPassword(String email, String password) async {
     try {
+      // Validate inputs
+      if (email.isEmpty || password.isEmpty) {
+        return {'success': false, 'message': 'Email and password are required'};
+      }
+
       UserCredential result = await _auth.signInWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
 
-      _userId = result.user?.uid ?? '';
-      _userEmail = result.user?.email ?? email;
-      _userName = result.user?.displayName ?? '';
+      if (result.user == null) {
+        return {'success': false, 'message': 'Login failed. Please try again.'};
+      }
+
+      _userId = result.user!.uid;
+      _userEmail = result.user!.email ?? email.trim();
+      _userName = result.user!.displayName ?? '';
       _isLoggedIn = true;
       _isGuest = false;
       _isNewSignUp = false;
 
-      // Check if user is new (first time login)
+      // Check if user exists in Firestore
       bool isNewUser = false;
-      DocumentSnapshot userDoc = await _firestore
-          .collection('users')
-          .doc(_userId)
-          .get();
+      try {
+        DocumentSnapshot userDoc = await _firestore
+            .collection('users')
+            .doc(_userId)
+            .get();
 
-      if (userDoc.exists) {
-        Map<String, dynamic> data = userDoc.data() as Map<String, dynamic>;
-        isNewUser = data['isNewUser'] ?? false;
+        if (userDoc.exists) {
+          Map<String, dynamic> data = userDoc.data() as Map<String, dynamic>;
+          isNewUser = data['isNewUser'] ?? false;
 
-        // Update last login
-        await _firestore.collection('users').doc(_userId).update({
-          'lastLogin': FieldValue.serverTimestamp(),
-          'loginCount': FieldValue.increment(1),
-        });
+          // Update login info
+          await _firestore.collection('users').doc(_userId).update({
+            'lastLogin': FieldValue.serverTimestamp(),
+            'loginCount': FieldValue.increment(1),
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+        } else {
+          // Create user document if not exists
+          await _firestore.collection('users').doc(_userId).set({
+            'name': _userName.isNotEmpty ? _userName : email.split('@').first,
+            'email': _userEmail,
+            'username': email.split('@').first.toLowerCase(),
+            'createdAt': FieldValue.serverTimestamp(),
+            'lastLogin': FieldValue.serverTimestamp(),
+            'loginCount': 1,
+            'isNewUser': false,
+            'emailVerified': result.user!.emailVerified,
+          });
+          isNewUser = true;
+        }
+      } catch (e) {
+        print('Firestore error during login: $e');
+        // Continue even if Firestore fails - user is still authenticated
       }
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user_id', _userId);
-      await prefs.setString('user_email', _userEmail);
-      await prefs.setString('user_name', _userName);
-      await prefs.setBool('is_logged_in', true);
-      await prefs.setBool('is_guest', false);
-      await prefs.setBool('is_new_signup', false);
+      // Save to SharedPreferences
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('is_logged_in', true);
+        await prefs.setBool('is_guest', false);
+        await prefs.setString('user_id', _userId);
+        await prefs.setString('user_email', _userEmail);
+        await prefs.setString('user_name', _userName);
+        await prefs.setBool('is_new_signup', isNewUser);
+      } catch (e) {
+        print('Error saving to SharedPreferences: $e');
+      }
 
       notifyListeners();
 
       return {
         'success': true,
-        'message': 'Login successful',
-        'user': result.user,
+        'message': 'Login successful!',
         'isNewUser': isNewUser
       };
     } on FirebaseAuthException catch (e) {
       String message = 'Login failed';
-      if (e.code == 'user-not-found' || e.code == 'wrong-password') {
-        message = 'Invalid email or password';
+      if (e.code == 'user-not-found') {
+        message = 'No account found with this email. Please sign up first.';
+      } else if (e.code == 'wrong-password') {
+        message = 'Incorrect password. Please try again.';
+      } else if (e.code == 'invalid-email') {
+        message = 'Invalid email format.';
       } else if (e.code == 'too-many-requests') {
         message = 'Too many attempts. Try again later.';
       } else if (e.code == 'user-disabled') {
         message = 'This account has been disabled.';
-      } else if (e.code == 'network-request-failed') {
-        message = 'Network error. Check your connection.';
       }
-      return {'success': false, 'message': message, 'isNewUser': false};
+      print('FirebaseAuthException: ${e.code} - ${e.message}');
+      return {'success': false, 'message': message};
     } catch (e) {
-      return {'success': false, 'message': 'An error occurred. Please try again.', 'isNewUser': false};
+      print('Login error: $e');
+      return {'success': false, 'message': 'An error occurred. Please try again.'};
     }
   }
 
-  // 🔥 FIREBASE SIGNUP METHOD
+  // 🔥 FIREBASE SIGNUP METHOD - FIXED
   Future<Map<String, dynamic>> signUpWithEmailPassword({
     required String name,
     required String email,
@@ -191,67 +252,120 @@ class AuthProvider extends ChangeNotifier {
     String? username,
   }) async {
     try {
-      UserCredential result = await _auth.createUserWithEmailAndPassword(
-        email: email.trim(),
-        password: password,
-      );
-
-      if (result.user != null) {
-        await result.user!.updateDisplayName(name);
-        await result.user!.sendEmailVerification();
-
-        await _firestore.collection('users').doc(result.user!.uid).set({
-          'name': name,
-          'email': email.trim(),
-          'username': username ?? name.toLowerCase().replaceAll(' ', ''),
-          'phone': phone ?? '',
-          'dob': dob?.toIso8601String(),
-          'gender': gender ?? '',
-          'createdAt': DateTime.now().toIso8601String(),
-          'updatedAt': DateTime.now().toIso8601String(),
-          'emailVerified': false,
-          'isNewUser': true,  // Mark as new user
-          'loginCount': 1,
-        });
+      // Validate required fields
+      if (name.isEmpty || email.isEmpty || password.isEmpty) {
+        return {'success': false, 'message': 'All required fields must be filled'};
       }
 
-      _userId = result.user?.uid ?? '';
-      _userEmail = result.user?.email ?? email;
-      _userName = name;
+      // Create user in Firebase Auth
+      UserCredential result;
+      try {
+        result = await _auth.createUserWithEmailAndPassword(
+          email: email.trim(),
+          password: password,
+        );
+      } catch (e) {
+        print('Error creating user: $e');
+        rethrow;
+      }
+
+      if (result.user == null) {
+        return {'success': false, 'message': 'Failed to create account'};
+      }
+
+      // Update display name
+      try {
+        await result.user!.updateDisplayName(name);
+        await result.user!.reload();
+      } catch (e) {
+        print('Error updating display name: $e');
+        // Continue even if display name update fails
+      }
+
+      // Send email verification
+      try {
+        await result.user!.sendEmailVerification();
+      } catch (e) {
+        print('Error sending verification email: $e');
+        // Continue even if verification email fails
+      }
+
+      // Prepare user data for Firestore
+      Map<String, dynamic> userData = {
+        'name': name.trim(),
+        'email': email.trim().toLowerCase(),
+        'username': username?.toLowerCase().trim() ??
+            name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), ''),
+        'createdAt': FieldValue.serverTimestamp(),
+        'emailVerified': false,
+        'isNewUser': true,
+        'loginCount': 1,
+      };
+
+      // Add optional fields only if they're provided and not empty
+      if (phone != null && phone.trim().isNotEmpty) {
+        userData['phone'] = phone.trim();
+      }
+
+      if (dob != null) {
+        userData['dob'] = dob.toIso8601String();
+      }
+
+      if (gender != null && gender.trim().isNotEmpty) {
+        userData['gender'] = gender.trim();
+      }
+
+      // Save to Firestore
+      try {
+        await _firestore.collection('users').doc(result.user!.uid).set(userData);
+      } catch (e) {
+        print('Error saving to Firestore: $e');
+        // Continue even if Firestore fails - user is still authenticated
+      }
+
+      // Update local state
+      _userId = result.user!.uid;
+      _userEmail = result.user!.email ?? email.trim();
+      _userName = name.trim();
       _isLoggedIn = true;
       _isGuest = false;
       _isNewSignUp = true;
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user_id', _userId);
-      await prefs.setString('user_email', _userEmail);
-      await prefs.setString('user_name', _userName);
-      await prefs.setBool('is_logged_in', true);
-      await prefs.setBool('is_guest', false);
-      await prefs.setBool('is_new_signup', true);
+      // Save to SharedPreferences
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('is_logged_in', true);
+        await prefs.setBool('is_guest', false);
+        await prefs.setString('user_id', _userId);
+        await prefs.setString('user_email', _userEmail);
+        await prefs.setString('user_name', _userName);
+        await prefs.setBool('is_new_signup', true);
+      } catch (e) {
+        print('Error saving to SharedPreferences: $e');
+      }
 
       notifyListeners();
 
       return {
         'success': true,
-        'message': 'Account created successfully',
-        'user': result.user,
-        'isNewUser': true
+        'message': 'Account created! Please verify your email.'
       };
     } on FirebaseAuthException catch (e) {
       String message = 'Signup failed';
       if (e.code == 'email-already-in-use') {
-        message = 'This email is already registered';
+        message = 'This email is already registered. Please login.';
       } else if (e.code == 'weak-password') {
-        message = 'Password is too weak';
+        message = 'Password is too weak. Use 8+ chars with letters and numbers.';
       } else if (e.code == 'invalid-email') {
-        message = 'Invalid email address';
+        message = 'Invalid email address.';
       } else if (e.code == 'operation-not-allowed') {
-        message = 'Email/password accounts are not enabled';
+        message = 'Email/password sign up is not enabled.';
       }
-      return {'success': false, 'message': message, 'isNewUser': false};
+      print('FirebaseAuthException: ${e.code} - ${e.message}');
+      return {'success': false, 'message': message};
     } catch (e) {
-      return {'success': false, 'message': 'An error occurred. Please try again.', 'isNewUser': false};
+      print('Signup error: $e');
+      return {'success': false, 'message': 'An error occurred. Please try again.'};
     }
   }
 
@@ -259,10 +373,11 @@ class AuthProvider extends ChangeNotifier {
   Future<Map<String, dynamic>> signInWithGoogle() async {
     try {
       // TODO: Implement actual Google Sign In
+      // For now, using mock data
       await Future.delayed(const Duration(seconds: 1));
 
       String mockUid = 'google_${DateTime.now().millisecondsSinceEpoch}';
-      bool isNewUser = true; // In real implementation, check if user exists
+      bool isNewUser = true;
 
       _userId = mockUid;
       _userEmail = 'user@gmail.com';
@@ -287,7 +402,8 @@ class AuthProvider extends ChangeNotifier {
         'isNewUser': isNewUser
       };
     } catch (e) {
-      return {'success': false, 'message': 'Google sign in failed', 'isNewUser': false};
+      print('Google sign in error: $e');
+      return {'success': false, 'message': 'Google sign in failed'};
     }
   }
 
@@ -323,33 +439,38 @@ class AuthProvider extends ChangeNotifier {
         'isNewUser': isNewUser
       };
     } catch (e) {
-      return {'success': false, 'message': 'Facebook sign in failed', 'isNewUser': false};
+      print('Facebook sign in error: $e');
+      return {'success': false, 'message': 'Facebook sign in failed'};
     }
   }
 
   // 🔥 SOCIAL LOGIN (General)
   Future<void> socialLogin(String platform) async {
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      await Future.delayed(const Duration(seconds: 2));
 
-    _userId = 'social_${platform.toLowerCase()}_${DateTime.now().millisecondsSinceEpoch}';
-    _userEmail = 'user@$platform.com';
-    _userName = platform;
-    _isLoggedIn = true;
-    _isGuest = false;
-    _isNewSignUp = true;
+      _userId = 'social_${platform.toLowerCase()}_${DateTime.now().millisecondsSinceEpoch}';
+      _userEmail = 'user@$platform.com';
+      _userName = platform;
+      _isLoggedIn = true;
+      _isGuest = false;
+      _isNewSignUp = true;
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_id', _userId);
-    await prefs.setString('user_email', _userEmail);
-    await prefs.setString('user_name', _userName);
-    await prefs.setBool('is_logged_in', true);
-    await prefs.setBool('is_guest', false);
-    await prefs.setBool('is_new_signup', true);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_id', _userId);
+      await prefs.setString('user_email', _userEmail);
+      await prefs.setString('user_name', _userName);
+      await prefs.setBool('is_logged_in', true);
+      await prefs.setBool('is_guest', false);
+      await prefs.setBool('is_new_signup', true);
 
-    notifyListeners();
+      notifyListeners();
+    } catch (e) {
+      print('Social login error: $e');
+    }
   }
 
-  // 🔥 VERIFY EMAIL (for OTP verification)
+  // 🔥 VERIFY EMAIL
   Future<Map<String, dynamic>> verifyEmail(String otp) async {
     try {
       User? user = _auth.currentUser;
@@ -357,172 +478,288 @@ class AuthProvider extends ChangeNotifier {
         return {'success': false, 'message': 'No user logged in'};
       }
 
-      // Reload user to get latest email verification status
       await user.reload();
       user = _auth.currentUser;
 
       if (user?.emailVerified == true) {
-        // Update Firestore
-        await _firestore.collection('users').doc(user!.uid).update({
-          'emailVerified': true,
-          'verifiedAt': FieldValue.serverTimestamp(),
-        });
+        try {
+          await _firestore.collection('users').doc(user!.uid).update({
+            'emailVerified': true,
+            'verifiedAt': FieldValue.serverTimestamp(),
+            'isNewUser': false,
+          });
+        } catch (e) {
+          print('Error updating email verified status: $e');
+        }
 
-        return {'success': true, 'message': 'Email verified successfully'};
+        // Clear new signup flag
+        _isNewSignUp = false;
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('is_new_signup', false);
+
+        return {'success': true, 'message': 'Email verified successfully!'};
       } else {
-        // In a real app, you'd verify OTP here
-        // For demo, we'll simulate success after 1 second
-        await Future.delayed(const Duration(seconds: 1));
-
-        await _firestore.collection('users').doc(user!.uid).update({
-          'emailVerified': true,
-          'verifiedAt': FieldValue.serverTimestamp(),
-        });
-
-        return {'success': true, 'message': 'Email verified successfully'};
+        return {'success': false, 'message': 'Email not verified yet'};
       }
     } catch (e) {
-      print('Error verifying email: $e');
-      return {'success': false, 'message': 'Verification failed'};
+      print('Email verification error: $e');
+      return {'success': false, 'message': 'Verification failed. Please try again.'};
     }
   }
 
-  // 🔥 RESEND OTP
+  // 🔥 RESEND VERIFICATION EMAIL
   Future<Map<String, dynamic>> resendOtp(String email) async {
     try {
       User? user = _auth.currentUser;
       if (user != null) {
         await user.sendEmailVerification();
-        return {'success': true, 'message': 'Verification email sent'};
+        return {'success': true, 'message': 'Verification email sent!'};
       }
       return {'success': false, 'message': 'No user logged in'};
     } catch (e) {
-      print('Error resending OTP: $e');
-      return {'success': false, 'message': 'Failed to resend OTP'};
+      print('Resend OTP error: $e');
+      return {'success': false, 'message': 'Failed to resend verification email'};
     }
   }
 
-  // 🔥 FIREBASE LOGOUT
+  // 🔥 SET USER INFO
+  Future<void> setUserInfo({required String userId, required String email, String? name}) async {
+    try {
+      _userId = userId;
+      _userEmail = email;
+      _userName = name ?? '';
+      _isGuest = false;
+      _isLoggedIn = true;
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_id', userId);
+      await prefs.setString('user_email', email);
+      if (name != null) await prefs.setString('user_name', name);
+      await prefs.setBool('is_guest', false);
+      await prefs.setBool('is_logged_in', true);
+
+      notifyListeners();
+    } catch (e) {
+      print('Error setting user info: $e');
+    }
+  }
+
+  // 🔥 MARK AS NEW SIGNUP
+  Future<void> markAsNewSignUp() async {
+    try {
+      _isNewSignUp = true;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_new_signup', true);
+      notifyListeners();
+    } catch (e) {
+      print('Error marking as new signup: $e');
+    }
+  }
+
+  // 🔥 CLEAR NEW SIGNUP FLAG
+  Future<void> clearNewSignUpFlag() async {
+    try {
+      _isNewSignUp = false;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_new_signup', false);
+
+      // Also update Firestore
+      if (_userId.isNotEmpty && _userId != 'guest') {
+        try {
+          await _firestore.collection('users').doc(_userId).update({
+            'isNewUser': false,
+          });
+        } catch (e) {
+          print('Error updating isNewUser in Firestore: $e');
+        }
+      }
+
+      notifyListeners();
+    } catch (e) {
+      print('Error clearing new signup flag: $e');
+    }
+  }
+
+  // 🔥 SET LOGGED IN
+  Future<void> setLoggedIn(bool loggedIn) async {
+    try {
+      _isLoggedIn = loggedIn;
+      _isGuest = !loggedIn;
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_logged_in', loggedIn);
+      await prefs.setBool('is_guest', !loggedIn);
+
+      if (!loggedIn) {
+        _userId = '';
+        _userEmail = '';
+        _userName = '';
+        await prefs.setString('user_id', '');
+        await prefs.setString('user_email', '');
+        await prefs.setString('user_name', '');
+      }
+
+      notifyListeners();
+    } catch (e) {
+      print('Error setting logged in: $e');
+    }
+  }
+
+  // 🔥 LOGOUT
   Future<void> logout() async {
-    await _auth.signOut();
+    try {
+      await _auth.signOut();
 
-    _isGuest = false;
-    _isLoggedIn = false;
-    _userId = '';
-    _userEmail = '';
-    _userName = '';
-    _isNewSignUp = false;
+      _isGuest = false;
+      _isLoggedIn = false;
+      _userId = '';
+      _userEmail = '';
+      _userName = '';
+      _isNewSignUp = false;
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('is_guest', false);
-    await prefs.setBool('is_logged_in', false);
-    await prefs.setString('user_id', '');
-    await prefs.setString('user_email', '');
-    await prefs.setString('user_name', '');
-    await prefs.setBool('is_new_signup', false);
-    await prefs.remove('saved_email');  // Clear saved email on logout
-
-    notifyListeners();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      notifyListeners();
+    } catch (e) {
+      print('Logout error: $e');
+    }
   }
 
   // 🔥 RESET PASSWORD
   Future<Map<String, dynamic>> resetPassword(String email) async {
     try {
-      await _auth.sendPasswordResetEmail(email: email.trim());
-      return {'success': true, 'message': 'Password reset email sent'};
-    } on FirebaseAuthException catch (e) {
-      String message = 'Failed to send reset email';
-      if (e.code == 'user-not-found') {
-        message = 'No account found with this email';
-      } else if (e.code == 'invalid-email') {
-        message = 'Invalid email address';
+      if (email.isEmpty) {
+        return {'success': false, 'message': 'Email is required'};
       }
-      return {'success': false, 'message': message};
+
+      await _auth.sendPasswordResetEmail(email: email.trim());
+      return {'success': true, 'message': 'Password reset email sent!'};
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') {
+        return {'success': false, 'message': 'No account found with this email'};
+      } else if (e.code == 'invalid-email') {
+        return {'success': false, 'message': 'Invalid email address'};
+      }
+      print('Reset password error: $e');
+      return {'success': false, 'message': 'Failed to send reset email'};
     } catch (e) {
+      print('Reset password error: $e');
       return {'success': false, 'message': 'An error occurred'};
     }
   }
 
-  // SET USER INFO
-  Future<void> setUserInfo({required String userId, required String email, String? name}) async {
-    _userId = userId;
-    _userEmail = email;
-    _userName = name ?? '';
-    _isGuest = false;
-    _isLoggedIn = true;
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_id', userId);
-    await prefs.setString('user_email', email);
-    if (name != null) await prefs.setString('user_name', name);
-    await prefs.setBool('is_guest', false);
-    await prefs.setBool('is_logged_in', true);
-
-    notifyListeners();
-  }
-
-  Future<void> markAsNewSignUp() async {
-    _isNewSignUp = true;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('is_new_signup', true);
-    notifyListeners();
-  }
-
-  Future<void> clearNewSignUpFlag() async {
-    _isNewSignUp = false;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('is_new_signup', false);
-    notifyListeners();
-  }
-
+  // 🔥 GUEST MODE
   Future<void> setGuestMode(bool isGuest) async {
-    _isGuest = isGuest;
-    _isLoggedIn = !isGuest;
-    _userId = isGuest ? 'guest' : '';
+    try {
+      _isGuest = isGuest;
+      _isLoggedIn = !isGuest;
+      _userId = isGuest ? 'guest' : '';
+      _userEmail = '';
+      _userName = '';
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('is_guest', isGuest);
-    await prefs.setBool('is_logged_in', !isGuest);
-    await prefs.setString('user_id', isGuest ? 'guest' : '');
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_guest', isGuest);
+      await prefs.setBool('is_logged_in', !isGuest);
+      await prefs.setString('user_id', isGuest ? 'guest' : '');
+      await prefs.setString('user_email', '');
+      await prefs.setString('user_name', '');
 
-    if (isGuest) {
-      await prefs.setBool('is_new_signup', false);
-      _isNewSignUp = false;
+      if (isGuest) {
+        _isNewSignUp = false;
+        await prefs.setBool('is_new_signup', false);
+      }
+      notifyListeners();
+    } catch (e) {
+      print('Error setting guest mode: $e');
     }
-
-    notifyListeners();
   }
 
-  Future<void> setLoggedIn(bool loggedIn) async {
-    _isLoggedIn = loggedIn;
-    _isGuest = !loggedIn;
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('is_logged_in', loggedIn);
-    await prefs.setBool('is_guest', !loggedIn);
-
-    if (!loggedIn) {
-      _userId = '';
-      await prefs.setString('user_id', '');
-    }
-
-    notifyListeners();
-  }
-
+  // 🔥 SET ONBOARDING COMPLETED
   Future<void> setOnboardingCompleted(bool completed) async {
-    _hasCompletedOnboarding = completed;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('has_completed_onboarding', completed);
-    notifyListeners();
+    try {
+      _hasCompletedOnboarding = completed;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('has_completed_onboarding', completed);
+      notifyListeners();
+    } catch (e) {
+      print('Error setting onboarding completed: $e');
+    }
   }
 
+  // 🔥 SET PERMISSIONS COMPLETED
+  Future<void> setPermissionsCompleted() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('has_completed_permissions', true);
+
+      // Clear new signup flag if needed
+      if (_isNewSignUp) {
+        _isNewSignUp = false;
+        await prefs.setBool('is_new_signup', false);
+
+        // Update Firestore
+        if (_userId.isNotEmpty && _userId != 'guest') {
+          try {
+            await _firestore.collection('users').doc(_userId).update({
+              'isNewUser': false,
+              'permissionsCompleted': true,
+              'permissionsCompletedAt': FieldValue.serverTimestamp(),
+            });
+          } catch (e) {
+            print('Error updating permissions completed in Firestore: $e');
+          }
+        }
+      }
+
+      notifyListeners();
+    } catch (e) {
+      print('Error setting permissions completed: $e');
+    }
+  }
+
+  // 🔥 GENERATE USER ID FROM EMAIL
   static String generateUserIdFromEmail(String email) {
     if (email.isEmpty) return 'unknown';
     return email.split('@').first + '_' + DateTime.now().millisecondsSinceEpoch.toString();
   }
 
+  // 🔥 HAS USER DATA
   Future<bool> hasUserData() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('user_id')?.isNotEmpty ?? false;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('user_id')?.isNotEmpty ?? false;
+    } catch (e) {
+      print('Error checking user data: $e');
+      return false;
+    }
+  }
+
+  // 🔥 GET USER DATA FROM FIRESTORE
+  Future<Map<String, dynamic>?> getUserData(String uid) async {
+    try {
+      DocumentSnapshot doc = await _firestore.collection('users').doc(uid).get();
+      if (doc.exists) {
+        return doc.data() as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      print('Error getting user data: $e');
+      return null;
+    }
+  }
+
+  // 🔥 UPDATE USER DATA
+  Future<bool> updateUserData(Map<String, dynamic> data) async {
+    try {
+      if (_userId.isEmpty || _userId == 'guest') {
+        return false;
+      }
+
+      await _firestore.collection('users').doc(_userId).update(data);
+      return true;
+    } catch (e) {
+      print('Error updating user data: $e');
+      return false;
+    }
   }
 }

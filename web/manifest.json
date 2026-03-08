@@ -1,11 +1,6 @@
 {
-<<<<<<< HEAD
     "name": "tapmate",
     "short_name": "tapmate",
-=======
-    "name": "tapmatefyp",
-    "short_name": "tapmatefyp",
->>>>>>> 1e96176 (Add Android/Flutter project files)
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

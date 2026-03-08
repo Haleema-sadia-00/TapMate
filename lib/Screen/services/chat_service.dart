@@ -1,3 +1,5 @@
+// lib/services/chat_service.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -8,7 +10,7 @@ class ChatService {
 
   // ==================== CHAT LIST FEATURES ====================
 
-  // 1. GET ALL CHATS FOR CURRENT USER - FIXED VERSION
+  // 1. GET ALL CHATS FOR CURRENT USER - FIXED VERSION (WITHOUT ORDERBY)
   Stream<List<Map<String, dynamic>>> getChats() {
     User? currentUser = _auth.currentUser;
     if (currentUser == null) {
@@ -18,10 +20,10 @@ class ChatService {
 
     print('📱 Fetching chats for user: ${currentUser.uid}');
 
+    // 🔥 FIXED: Removed orderBy to avoid index error
     return _firestore
         .collection('chats')
         .where('participants', arrayContains: currentUser.uid)
-        .orderBy('lastMessageTime', descending: true)  // ✅ CRITICAL FIX - Add this
         .snapshots()
         .asyncMap((snapshot) async {
 
@@ -32,30 +34,16 @@ class ChatService {
       for (var doc in snapshot.docs) {
         try {
           Map<String, dynamic> chatData = doc.data() as Map<String, dynamic>;
-          print('📄 Chat doc ID: ${doc.id}');
 
           // Get other participant's info
           List participants = List.from(chatData['participants'] ?? []);
-          print('👥 Participants: $participants');
 
           String otherUserId = participants.firstWhere(
                 (id) => id != currentUser.uid,
             orElse: () => '',
           );
 
-          if (otherUserId.isEmpty) {
-            print('❌ No other participant found');
-            continue;
-          }
-
-          print('👤 Other user ID: $otherUserId');
-
-          // Check if user is blocked
-          bool isBlocked = await _isUserBlocked(otherUserId);
-          if (isBlocked) {
-            print('🚫 User is blocked, skipping');
-            continue;
-          }
+          if (otherUserId.isEmpty) continue;
 
           // Get user data from Firestore
           DocumentSnapshot userDoc = await _firestore
@@ -63,17 +51,10 @@ class ChatService {
               .doc(otherUserId)
               .get();
 
-          print('📄 User doc exists: ${userDoc.exists}');
-
           Map<String, dynamic> userData = {};
           if (userDoc.exists) {
             var data = userDoc.data();
-            if (data != null) {
-              userData = data as Map<String, dynamic>;
-              print('✅ User data fetched: ${userData['name']}');
-            }
-          } else {
-            print('❌ User document does not exist!');
+            if (data != null) userData = data as Map<String, dynamic>;
           }
 
           // Handle empty profile pics
@@ -83,7 +64,7 @@ class ChatService {
           int unreadCount = await _getUnreadCount(doc.id, currentUser.uid);
           bool isMuted = await _isChatMuted(doc.id);
 
-          Map<String, dynamic> chatItem = {
+          chats.add({
             'chatId': doc.id,
             'userId': otherUserId,
             'name': userData['name']?.toString() ?? 'Unknown User',
@@ -95,17 +76,22 @@ class ChatService {
             'is_online': userData['isOnline'] as bool? ?? false,
             'unread_count': unreadCount,
             'is_muted': isMuted,
-          };
-
-          print('✅ Chat item created with name: ${chatItem['name']}');
-          chats.add(chatItem);
+          });
 
         } catch (e) {
           print('❌ Error processing chat doc: $e');
         }
       }
 
-      print('🎉 Total chats processed: ${chats.length}');
+      // 🔥 Manually sort chats by last_message_time
+      chats.sort((a, b) {
+        Timestamp? timeA = a['last_message_time'] as Timestamp?;
+        Timestamp? timeB = b['last_message_time'] as Timestamp?;
+        if (timeA == null) return 1;
+        if (timeB == null) return -1;
+        return timeB.compareTo(timeA);
+      });
+
       return chats;
     });
   }
@@ -124,9 +110,7 @@ class ChatService {
       Map<String, dynamic> userData = {};
       if (userDoc.exists) {
         var data = userDoc.data();
-        if (data != null) {
-          userData = data as Map<String, dynamic>;
-        }
+        if (data != null) userData = data as Map<String, dynamic>;
       }
 
       List blockedUsers = List.from(userData['blocked_users'] ?? []);
@@ -155,9 +139,7 @@ class ChatService {
       Map<String, dynamic> data = {};
       if (prefDoc.exists) {
         var prefData = prefDoc.data();
-        if (prefData != null) {
-          data = prefData as Map<String, dynamic>;
-        }
+        if (prefData != null) data = prefData as Map<String, dynamic>;
       }
 
       bool muted = data['muted'] as bool? ?? false;
@@ -178,18 +160,18 @@ class ChatService {
 
   // ==================== MESSAGE FEATURES ====================
 
-  // 4. GET MESSAGES FOR A CHAT
+  // 4. GET MESSAGES FOR A CHAT - FIXED VERSION
   Stream<List<Map<String, dynamic>>> getMessages(String chatId) {
     if (chatId.isEmpty) return Stream.value([]);
 
     User? currentUser = _auth.currentUser;
     if (currentUser == null) return Stream.value([]);
 
+    // 🔥 FIXED: Removed orderBy to avoid index error
     return _firestore
         .collection('chats')
         .doc(chatId)
         .collection('messages')
-        .orderBy('timestamp', descending: false)
         .snapshots()
         .asyncMap((snapshot) async {
 
@@ -223,6 +205,15 @@ class ChatService {
         };
       }).toList();
 
+      // 🔥 Manually sort messages by timestamp
+      messages.sort((a, b) {
+        Timestamp? timeA = a['timestamp'] as Timestamp?;
+        Timestamp? timeB = b['timestamp'] as Timestamp?;
+        if (timeA == null) return 1;
+        if (timeB == null) return -1;
+        return timeA.compareTo(timeB);
+      });
+
       return messages;
     });
   }
@@ -245,9 +236,7 @@ class ChatService {
       Map<String, dynamic> userData = {};
       if (userDoc.exists) {
         var data = userDoc.data();
-        if (data != null) {
-          userData = data as Map<String, dynamic>;
-        }
+        if (data != null) userData = data as Map<String, dynamic>;
       }
 
       bool isOtherOnline = userData['isOnline'] as bool? ?? false;
@@ -310,7 +299,7 @@ class ChatService {
     });
   }
 
-  // 7. MARK MESSAGES AS READ - FIXED VERSION
+  // 7. MARK MESSAGES AS READ
   Future<void> markMessagesAsRead(String chatId) async {
     User? currentUser = _auth.currentUser;
     if (currentUser == null || chatId.isEmpty) return;
@@ -318,7 +307,6 @@ class ChatService {
     try {
       print('📨 Marking messages as read in chat: $chatId');
 
-      // Get all messages from other users
       QuerySnapshot messages = await _firestore
           .collection('chats')
           .doc(chatId)
@@ -662,9 +650,7 @@ class ChatService {
         Map<String, dynamic> userData = {};
         if (userDoc.exists) {
           var userDocData = userDoc.data();
-          if (userDocData != null) {
-            userData = userDocData as Map<String, dynamic>;
-          }
+          if (userDocData != null) userData = userDocData as Map<String, dynamic>;
         }
 
         String profilePic = userData['profilePic']?.toString() ??
@@ -711,9 +697,7 @@ class ChatService {
         Map<String, dynamic> userData = {};
         if (userDoc.exists) {
           var userDocData = userDoc.data();
-          if (userDocData != null) {
-            userData = userDocData as Map<String, dynamic>;
-          }
+          if (userDocData != null) userData = userDocData as Map<String, dynamic>;
         }
 
         String profilePic = userData['profilePic']?.toString() ??
@@ -898,9 +882,7 @@ class ChatService {
         Map<String, dynamic> userData = {};
         if (userDoc.exists) {
           var userDocData = userDoc.data();
-          if (userDocData != null) {
-            userData = userDocData as Map<String, dynamic>;
-          }
+          if (userDocData != null) userData = userDocData as Map<String, dynamic>;
         }
 
         String profilePic = userData['profilePic']?.toString() ??
@@ -938,9 +920,7 @@ class ChatService {
         Map<String, dynamic> userData = {};
         if (userDoc.exists) {
           var userDocData = userDoc.data();
-          if (userDocData != null) {
-            userData = userDocData as Map<String, dynamic>;
-          }
+          if (userDocData != null) userData = userDocData as Map<String, dynamic>;
         }
 
         String profilePic = userData['profilePic']?.toString() ??

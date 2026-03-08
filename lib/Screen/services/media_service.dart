@@ -17,13 +17,22 @@ class MediaService {
 
     final File mediaFile = File(file.path);
 
-    // Upload to Cloudinary
-    final mediaUrl = await _cloudinary.uploadFile(
-      file: mediaFile,
-      isVideo: isVideo,
-    );
+    try {
+      print('📤 Uploading to Cloudinary...');
+      print('Cloud Name: ${CloudinaryService.cloudName}');
+      print('Upload Preset: ${CloudinaryService.uploadPreset}');
 
-    return mediaUrl;
+      final mediaUrl = await _cloudinary.uploadFile(
+        file: mediaFile,
+        isVideo: isVideo,
+      );
+
+      print('✅ Upload successful: $mediaUrl');
+      return mediaUrl;
+    } catch (e) {
+      print('❌ Upload failed: $e');
+      rethrow;
+    }
   }
 
   Future<XFile?> pickImage() async {

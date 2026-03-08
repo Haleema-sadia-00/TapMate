@@ -1,4 +1,4 @@
-// lib/Screen/Auth/signup_screen.dart (COMBINED VERSION - KEEPS ALL UI FEATURES)
+// lib/Screen/Auth/SignupScreen.dart
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -49,9 +49,7 @@ class _SignupScreenState extends State<SignupScreen> {
   // Username checking debouncer
   Timer? _usernameDebounce;
 
-  // ============= VALIDATION METHODS =============
-
-  // FULL NAME - Only alphabets and spaces
+  // Validation Methods
   bool _isValidName(String name) {
     if (name.isEmpty) return false;
     final trimmedName = name.trim();
@@ -62,7 +60,6 @@ class _SignupScreenState extends State<SignupScreen> {
         nameRegex.hasMatch(trimmedName);
   }
 
-  // EMAIL - Professional format
   bool _isValidEmail(String email) {
     if (email.isEmpty) return false;
     final emailRegex = RegExp(
@@ -71,20 +68,17 @@ class _SignupScreenState extends State<SignupScreen> {
     return emailRegex.hasMatch(email);
   }
 
-  // USERNAME - Letters, numbers, underscore only
   bool _isValidUsername(String username) {
     if (username.isEmpty) return false;
     return RegExp(r'^[a-zA-Z0-9_]{3,20}$').hasMatch(username);
   }
 
-  // Phone validation
   bool _isValidPhone(String phone) {
     if (phone.isEmpty) return true;
     final digitsOnly = phone.replaceAll(RegExp(r'[^0-9]'), '');
     return digitsOnly.length >= 10 && digitsOnly.length <= 15;
   }
 
-  // PASSWORD VALIDATION - With conditions
   bool _isValidPassword(String password) {
     if (password.isEmpty) return false;
     return RegExp(
@@ -92,12 +86,10 @@ class _SignupScreenState extends State<SignupScreen> {
     ).hasMatch(password);
   }
 
-  // CONFIRM PASSWORD VALIDATION - Check if matches
   bool _doPasswordsMatch() {
     return _passwordController.text == _confirmPasswordController.text;
   }
 
-  // Check if username exists in Firestore
   Future<bool> _checkUsernameExists(String username) async {
     if (username.isEmpty) return false;
     try {
@@ -109,21 +101,18 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  // UPDATED: Validate inputs with password and confirm password
   Future<void> _validateInputs() async {
     setState(() {
       _signupError = null;
 
-      // ===== NAME VALIDATION =====
+      // Name Validation
       final name = _nameController.text.trim();
       String cleanName = name.replaceAll(RegExp(r'[^a-zA-Z\s]'), '');
       cleanName = cleanName.replaceAll(RegExp(r'\s+'), ' ').trim();
 
       if (name != cleanName) {
         _nameController.text = cleanName;
-        _nameController.selection = TextSelection.collapsed(
-          offset: cleanName.length,
-        );
+        _nameController.selection = TextSelection.collapsed(offset: cleanName.length);
       }
 
       if (cleanName.isEmpty) {
@@ -138,15 +127,13 @@ class _SignupScreenState extends State<SignupScreen> {
         _nameError = null;
       }
 
-      // ===== EMAIL VALIDATION =====
+      // Email Validation
       final email = _emailController.text.trim().toLowerCase();
       final cleanEmail = email.replaceAll(' ', '');
 
       if (email != cleanEmail) {
         _emailController.text = cleanEmail;
-        _emailController.selection = TextSelection.collapsed(
-          offset: cleanEmail.length,
-        );
+        _emailController.selection = TextSelection.collapsed(offset: cleanEmail.length);
       }
 
       if (cleanEmail.isEmpty) {
@@ -169,7 +156,7 @@ class _SignupScreenState extends State<SignupScreen> {
         _emailError = null;
       }
 
-      // ===== USERNAME VALIDATION =====
+      // Username Validation
       final username = _usernameController.text.trim().toLowerCase();
       _usernameController.text = username;
 
@@ -185,7 +172,7 @@ class _SignupScreenState extends State<SignupScreen> {
         _usernameError = null;
       }
 
-      // ===== PASSWORD VALIDATION =====
+      // Password Validation
       final password = _passwordController.text;
 
       if (password.isEmpty) {
@@ -204,7 +191,7 @@ class _SignupScreenState extends State<SignupScreen> {
         _passwordError = null;
       }
 
-      // ===== CONFIRM PASSWORD VALIDATION =====
+      // Confirm Password Validation
       final confirmPassword = _confirmPasswordController.text;
 
       if (confirmPassword.isEmpty) {
@@ -215,7 +202,7 @@ class _SignupScreenState extends State<SignupScreen> {
         _confirmPasswordError = null;
       }
 
-      // ===== PHONE VALIDATION =====
+      // Phone Validation
       final phone = _phoneController.text.trim();
       if (phone.isNotEmpty) {
         final digitsOnly = phone.replaceAll(RegExp(r'[^0-9]'), '');
@@ -230,7 +217,7 @@ class _SignupScreenState extends State<SignupScreen> {
         _phoneError = null;
       }
 
-      // ===== DOB VALIDATION =====
+      // DOB Validation
       if (_selectedDate == null) {
         _dobError = "⚠️ Date of Birth is required";
       } else {
@@ -238,7 +225,7 @@ class _SignupScreenState extends State<SignupScreen> {
       }
     });
 
-    // Check username uniqueness asynchronously
+    // Check username uniqueness
     if (_usernameError == null && _usernameController.text.trim().isNotEmpty) {
       final username = _usernameController.text.trim().toLowerCase();
       final exists = await _checkUsernameExists(username);
@@ -250,7 +237,6 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  // Debounced username validation
   void _onUsernameChanged(String value) {
     _usernameDebounce?.cancel();
     _usernameDebounce = Timer(const Duration(milliseconds: 500), () {
@@ -314,7 +300,6 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // Snackbar methods
   void _showSuccessSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -366,7 +351,6 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // SIGN UP METHOD - Using YOUR AuthProvider structure
   void _signUp() async {
     await _validateInputs();
 
@@ -375,14 +359,12 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
 
-    // Check for any validation errors
     if (_nameError != null ||
         _emailError != null ||
         _usernameError != null ||
         _passwordError != null ||
         _confirmPasswordError != null ||
-        _dobError != null ||
-        _phoneError != null) {
+        _dobError != null) {
 
       if (_nameError != null) _showErrorSnackBar(_nameError!);
       else if (_emailError != null) _showErrorSnackBar(_emailError!);
@@ -390,7 +372,6 @@ class _SignupScreenState extends State<SignupScreen> {
       else if (_passwordError != null) _showErrorSnackBar(_passwordError!);
       else if (_confirmPasswordError != null) _showErrorSnackBar(_confirmPasswordError!);
       else if (_dobError != null) _showErrorSnackBar(_dobError!);
-      else if (_phoneError != null) _showErrorSnackBar(_phoneError!);
       return;
     }
 
@@ -407,6 +388,7 @@ class _SignupScreenState extends State<SignupScreen> {
       final formattedEmail = _emailController.text.trim().toLowerCase();
       final formattedUsername = _usernameController.text.trim().toLowerCase();
 
+      // Format phone number properly
       String? formattedPhone;
       if (_phoneController.text.trim().isNotEmpty) {
         formattedPhone = _phoneController.text.trim().replaceAll(
@@ -415,27 +397,31 @@ class _SignupScreenState extends State<SignupScreen> {
         );
       }
 
-      // Call YOUR AuthProvider's signUp method
+      print('Attempting signup with:'); // Debug log
+      print('Name: $formattedName');
+      print('Email: $formattedEmail');
+      print('Username: $formattedUsername');
+
       final result = await authProvider.signUpWithEmailPassword(
         name: formattedName,
         email: formattedEmail,
         password: _passwordController.text,
         phone: formattedPhone,
         dob: _selectedDate,
-        gender: _selectedGender ?? '',
+        gender: _selectedGender,
         username: formattedUsername,
       );
+
+      print('Signup result: $result'); // Debug log
 
       if (result['success'] == true) {
         if (mounted) {
           setState(() => _signupError = null);
           _showSuccessSnackBar('✅ Account created! Please verify your email.');
 
-          // Clear password fields for security
           _passwordController.clear();
           _confirmPasswordController.clear();
 
-          // Navigate to email verification screen
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -448,15 +434,9 @@ class _SignupScreenState extends State<SignupScreen> {
       } else {
         setState(() => _signupError = result['message']);
         _showErrorSnackBar('❌ ${result['message']}');
-
-        if (result['message']?.contains('username') == true) {
-          FocusScope.of(context).requestFocus(FocusNode());
-          Future.delayed(const Duration(milliseconds: 100), () {
-            FocusScope.of(context).requestFocus(FocusNode());
-          });
-        }
       }
     } catch (e) {
+      print('Signup exception: $e'); // Debug log
       setState(() => _signupError = 'Error: ${e.toString()}');
       _showErrorSnackBar('❌ ${e.toString()}');
     } finally {
@@ -517,7 +497,6 @@ class _SignupScreenState extends State<SignupScreen> {
         _showErrorSnackBar('❌ ${result['message']}');
       }
     } catch (e) {
-      debugPrint('❌ Facebook sign up error: $e');
       setState(() => _signupError = 'Facebook sign up failed');
       _showErrorSnackBar('❌ Facebook sign up failed');
     } finally {
@@ -536,7 +515,6 @@ class _SignupScreenState extends State<SignupScreen> {
       if (mounted) {
         _showInfoSnackBar("TikTok sign up coming soon! 🎵");
       }
-      debugPrint('TikTok sign up tapped');
     } catch (e) {
       debugPrint('❌ TikTok sign up error: $e');
     } finally {
@@ -621,7 +599,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: 10),
 
-              // Logo/Icon
+              // Logo
               Center(
                 child: Container(
                   width: 80,
@@ -642,11 +620,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     ],
                   ),
                   child: const Center(
-                    child: Icon(
-                      Icons.person_add_alt_1,
-                      color: AppColors.lightSurface,
-                      size: 40,
-                    ),
+                    child: Icon(Icons.person_add_alt_1, color: AppColors.lightSurface, size: 40),
                   ),
                 ),
               ),
@@ -674,47 +648,39 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: 30),
 
-              // ===== FULL NAME =====
+              // Full Name
               _buildNameField(),
-
               const SizedBox(height: 15),
 
-              // ===== EMAIL =====
+              // Email
               _buildEmailField(),
-
               const SizedBox(height: 15),
 
-              // ===== USERNAME =====
+              // Username
               _buildUsernameField(),
-
               const SizedBox(height: 15),
 
-              // ===== PASSWORD FIELD WITH REQUIREMENTS =====
+              // Password
               _buildPasswordField(),
-
               const SizedBox(height: 15),
 
-              // ===== CONFIRM PASSWORD FIELD =====
+              // Confirm Password
               _buildConfirmPasswordField(),
-
               const SizedBox(height: 15),
 
-              // ===== PHONE NUMBER =====
+              // Phone
               _buildPhoneField(),
-
               const SizedBox(height: 15),
 
-              // ===== DATE OF BIRTH =====
+              // Date of Birth
               _buildDateOfBirthField(),
-
               const SizedBox(height: 15),
 
-              // ===== GENDER SELECTION =====
+              // Gender
               _buildGenderSection(),
-
               const SizedBox(height: 15),
 
-              // ===== RECOVERY EMAIL =====
+              // Recovery Email
               _buildInputField(
                 controller: _recoveryEmailController,
                 icon: Icons.email,
@@ -723,25 +689,21 @@ class _SignupScreenState extends State<SignupScreen> {
                 keyboardType: TextInputType.emailAddress,
                 onChange: _validateInputs,
               ),
-
               const SizedBox(height: 20),
 
-              // ===== TERMS & CONDITIONS =====
+              // Terms
               _buildTermsSection(),
-
               const SizedBox(height: 25),
 
-              // ===== SIGN UP BUTTON =====
+              // Sign Up Button
               _buildSignUpButton(),
-
               const SizedBox(height: 20),
 
-              // ===== DIVIDER =====
+              // Divider
               _buildDivider(),
-
               const SizedBox(height: 20),
 
-              // ===== SOCIAL BUTTONS =====
+              // Social Buttons
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -751,14 +713,12 @@ class _SignupScreenState extends State<SignupScreen> {
                     onTap: _handleGoogleSignUp,
                   ),
                   const SizedBox(width: 20),
-
                   _socialButton(
                     icon: Icons.facebook,
                     color: Colors.blue,
                     onTap: _handleFacebookSignUp,
                   ),
                   const SizedBox(width: 20),
-
                   _socialButton(
                     icon: Icons.music_note,
                     color: const Color(0xFF000000),
@@ -766,12 +726,10 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                 ],
               ),
-
               const SizedBox(height: 25),
 
-              // ===== SIGN IN LINK =====
+              // Sign In Link
               _buildSignInLink(),
-
               const SizedBox(height: 20),
             ],
           ),
@@ -780,7 +738,7 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // ===== HELPER METHODS =====
+  // ===== UI HELPER METHODS =====
 
   Widget _buildNameField() {
     return Container(
@@ -853,9 +811,6 @@ class _SignupScreenState extends State<SignupScreen> {
               _validateInputs();
             },
             keyboardType: TextInputType.emailAddress,
-            textCapitalization: TextCapitalization.none,
-            autocorrect: false,
-            enableSuggestions: false,
             style: const TextStyle(color: AppColors.textMain, fontSize: 16),
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.email_outlined, color: AppColors.textMain),
@@ -899,17 +854,11 @@ class _SignupScreenState extends State<SignupScreen> {
               if (value != cleanUsername) {
                 _usernameController.value = TextEditingValue(
                   text: cleanUsername,
-                  selection: TextSelection.collapsed(
-                    offset: cleanUsername.length,
-                  ),
+                  selection: TextSelection.collapsed(offset: cleanUsername.length),
                 );
               }
               _onUsernameChanged(cleanUsername);
             },
-            keyboardType: TextInputType.text,
-            textCapitalization: TextCapitalization.none,
-            autocorrect: false,
-            enableSuggestions: false,
             style: const TextStyle(color: AppColors.textMain, fontSize: 16),
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.alternate_email, color: AppColors.textMain),
@@ -979,7 +928,6 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // Password field with better UI
   Widget _buildPasswordField() {
     bool isPasswordValid = _passwordController.text.isNotEmpty && _passwordError == null;
 
@@ -989,9 +937,7 @@ class _SignupScreenState extends State<SignupScreen> {
         borderRadius: BorderRadius.circular(12),
         border: _passwordError != null
             ? Border.all(color: Colors.red, width: 1.5)
-            : (isPasswordValid
-            ? Border.all(color: Colors.green, width: 1.0)
-            : null),
+            : (isPasswordValid ? Border.all(color: Colors.green, width: 1.0) : null),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1050,7 +996,6 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // Confirm password field with match indicator
   Widget _buildConfirmPasswordField() {
     bool passwordsMatch = _doPasswordsMatch() && _confirmPasswordController.text.isNotEmpty;
     bool passwordsDontMatch = !_doPasswordsMatch() && _confirmPasswordController.text.isNotEmpty;
@@ -1061,9 +1006,7 @@ class _SignupScreenState extends State<SignupScreen> {
         borderRadius: BorderRadius.circular(12),
         border: _confirmPasswordError != null
             ? Border.all(color: Colors.red, width: 1.5)
-            : (passwordsMatch
-            ? Border.all(color: Colors.green, width: 1.0)
-            : null),
+            : (passwordsMatch ? Border.all(color: Colors.green, width: 1.0) : null),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1285,10 +1228,7 @@ class _SignupScreenState extends State<SignupScreen> {
           padding: EdgeInsets.only(left: 8, bottom: 8),
           child: Text(
             "Gender (Optional)",
-            style: TextStyle(
-              color: AppColors.textMain,
-              fontWeight: FontWeight.w500,
-            ),
+            style: TextStyle(color: AppColors.textMain, fontWeight: FontWeight.w500),
           ),
         ),
         Row(
@@ -1357,18 +1297,12 @@ class _SignupScreenState extends State<SignupScreen> {
                       TextSpan(text: "I agree to the "),
                       TextSpan(
                         text: "Terms & Conditions",
-                        style: TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
                       ),
                       TextSpan(text: " and "),
                       TextSpan(
                         text: "Privacy Policy",
-                        style: TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -1397,7 +1331,6 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Widget _buildSignUpButton() {
-    // Check if all fields are valid
     bool isFormValid =
         _nameError == null && _nameController.text.isNotEmpty &&
             _emailError == null && _emailController.text.isNotEmpty &&
@@ -1414,28 +1347,18 @@ class _SignupScreenState extends State<SignupScreen> {
         onPressed: (_isLoading || !isFormValid) ? null : _signUp,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           elevation: 0,
-          shadowColor: Colors.transparent,
         ),
         child: _isLoading
             ? const SizedBox(
           width: 20,
           height: 20,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: AppColors.lightSurface,
-          ),
+          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.lightSurface),
         )
             : const Text(
           "Create Account",
-          style: TextStyle(
-            color: AppColors.lightSurface,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: AppColors.lightSurface, fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ),
     );
@@ -1447,10 +1370,7 @@ class _SignupScreenState extends State<SignupScreen> {
         Expanded(child: Divider(color: Colors.grey[300])),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: Text(
-            "Or sign up with",
-            style: TextStyle(color: Colors.grey[600]),
-          ),
+          child: Text("Or sign up with", style: TextStyle(color: Colors.grey[600])),
         ),
         Expanded(child: Divider(color: Colors.grey[300])),
       ],
@@ -1464,17 +1384,10 @@ class _SignupScreenState extends State<SignupScreen> {
         child: const Text.rich(
           TextSpan(
             children: [
-              TextSpan(
-                text: "Already have an account? ",
-                style: TextStyle(color: AppColors.textMain),
-              ),
+              TextSpan(text: "Already have an account? ", style: TextStyle(color: AppColors.textMain)),
               TextSpan(
                 text: "Sign In",
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
-                  decoration: TextDecoration.underline,
-                ),
+                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, decoration: TextDecoration.underline),
               ),
             ],
           ),

@@ -6,10 +6,13 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
 class CloudinaryService {
-  // 🔥 APNE CREDENTIALS DAL DIYE
-  static const String cloudName = 'dhzlkionm';  // tumhara cloud name
-  static const String apiKey = '169672485344253';  // tumhari API key
-  static const String apiSecret = 'dwiInp9xcKRuJ9A8Op-DXy_0pdU';  // tumhara secret
+  // 🔥 APNE SAHI CREDENTIALS YAHAN DALO
+  static const String cloudName = 'dhzlkionm';  // Tumhara cloud name
+  static const String apiKey = '169672485344253';  // Tumhari API key
+  static const String apiSecret = 'dwiInp9xcKRuJ9A8Op-DXy_0pdU';  // Tumhara secret
+
+  // 🔥 IMPORTANT: Upload preset add karo
+  static const String uploadPreset = 'tapmate_preset';  // Dashboard mein banao
 
   Future<String> uploadFile({
     required File file,
@@ -17,14 +20,17 @@ class CloudinaryService {
   }) async {
     try {
       print('📤 Uploading to Cloudinary...');
+      print('Cloud Name: $cloudName');
+      print('Upload Preset: $uploadPreset');
 
       var uri = Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/${isVideo ? 'video' : 'image'}/upload');
 
       var request = http.MultipartRequest('POST', uri)
-        ..fields['upload_preset'] = 'tapmate_preset'  // abhi preset banana hai
+        ..fields['upload_preset'] = uploadPreset
         ..files.add(await http.MultipartFile.fromPath(
           'file',
           file.path,
+          contentType: MediaType(isVideo ? 'video' : 'image', isVideo ? 'mp4' : 'jpg'),
         ));
 
       var response = await request.send();
