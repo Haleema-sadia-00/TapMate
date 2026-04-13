@@ -4,10 +4,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuth, User;
 import 'package:tapmate/Screen/constants/app_colors.dart';
 import 'package:tapmate/Screen/home/tour_screen.dart';
-import 'package:tapmate/Screen/utils/guide_manager.dart';
 import 'package:tapmate/Screen/home/platform_selection_screen.dart';
 import 'package:tapmate/auth_provider.dart' as myAuth;
 import 'package:tapmate/theme_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+
+import '../../utils/guide_manager.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -16,9 +20,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Variables for tutorial
-  bool _showTutorial = false;
-  int _currentStep = 0;
   bool _isLoading = true;
 
   // User data
@@ -27,55 +28,58 @@ class _HomeScreenState extends State<HomeScreen> {
   String _storageUsed = '0 GB';
   int _cloudUploads = 0;
 
+  // Real downloads
+  List<Map<String, dynamic>> _recentDownloads = [];
+
   // Firebase
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  List<Map<String, dynamic>> _tutorialSteps = [
-    {
-      'title': '👤 Profile Icon',
-      'message': 'Edit profile, see downloads & customize settings.',
-      'position': 'top-right'
-    },
-    {
-      'title': '📥 Download Dashboard',
-      'message': 'Check download readiness and status.',
-      'position': 'top-center'
-    },
-    {
-      'title': '⬇️ Download Button',
-      'message': 'Download videos from 10+ platforms.',
-      'position': 'bottom-right'
-    },
-    {
-      'title': '📊 Your Stats',
-      'message': 'Track downloads, storage & cloud uploads.',
-      'position': 'center'
-    },
-    {
-      'title': '📁 Video Library',
-      'message': 'Access & manage all downloaded videos.',
-      'position': 'center-left'
-    },
-    {
-      'title': '⚙️ Settings',
-      'message': 'Customize app preferences & dark mode.',
-      'position': 'center-right'
-    },
-    {
-      'title': '📍 Navigation',
-      'message': 'Switch between Home, Discover, Feed & Profile.',
-      'position': 'bottom-center'
-    },
-  ];
+  // 🔥 Floating button position
+  Offset _buttonPosition = Offset(0, 0);
+  bool _isDragging = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadUserData();
+      _loadRecentDownloads();
       _checkAndShowTutorial();
     });
+  }
+
+  Future<void> _loadRecentDownloads() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final history = prefs.getStringList('download_history') ?? [];
+
+      final downloads = history.map((item) {
+        try {
+          final data = jsonDecode(item);
+          return {
+            'title': data['title'] ?? 'Unknown',
+            'size': data['size'] ?? 0,
+            'platform': data['platform'] ?? 'Unknown',
+            'timestamp': DateTime.parse(data['timestamp']),
+            'filePath': data['filePath'] ?? '',
+          };
+        } catch (e) {
+          return null;
+        }
+      }).whereType<Map<String, dynamic>>().toList();
+
+      downloads.sort((a, b) => b['timestamp'].compareTo(a['timestamp']));
+
+      setState(() {
+        _recentDownloads = downloads.take(3).toList();
+      });
+    } catch (e) {
+      print('Error loading recent downloads: $e');
+      setState(() {
+        _recentDownloads = [];
+      });
+    }
   }
 
   Future<void> _loadUserData() async {
@@ -91,9 +95,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Map<String, dynamic> data = userDoc.data() as Map<String, dynamic>? ?? {};
           setState(() {
             _userData = data;
-            _downloadsCount = data['downloads_count'] ?? 247;
-            _storageUsed = data['storage_used'] ?? '2.4 GB';
-            _cloudUploads = data['cloud_uploads'] ?? 89;
+            _downloadsCount = data['downloads_count'] ?? 0;
+            _storageUsed = data['storage_used'] ?? '0 GB';
+            _cloudUploads = data['cloud_uploads'] ?? 0;
           });
         }
       }
@@ -103,11 +107,6 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() => _isLoading = false);
     }
   }
-
-// Top par import add karo
-
-
-// _checkAndShowTutorial method ko update karo:
 
   Future<void> _checkAndShowTutorial() async {
     final authProvider = Provider.of<myAuth.AuthProvider>(context, listen: false);
@@ -119,7 +118,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final userId = authProvider.userId;
 
-    // Check if user has seen tutorial
     final hasUserCompleted = await GuideManager.hasUserCompletedGuide(userId);
 
     if (hasUserCompleted) {
@@ -132,12 +130,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     setState(() => _isLoading = false);
 
-    // Wait for UI to render
     await Future.delayed(const Duration(milliseconds: 500));
 
     if (!mounted) return;
 
-    // Show tour screen
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -150,25 +146,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _nextTutorialStep() {
-    setState(() {
-      if (_currentStep < _tutorialSteps.length - 1) {
-        _currentStep++;
-      } else {
-        // Tutorial completed
-        _showTutorial = false;
-        _markTutorialCompleted();
-      }
-    });
-  }
-
-  void _skipTutorial() {
-    setState(() {
-      _showTutorial = false;
-    });
-    _markTutorialCompleted();
-  }
-
   Future<void> _markTutorialCompleted() async {
     final authProvider = Provider.of<myAuth.AuthProvider>(context, listen: false);
     final userId = authProvider.userId;
@@ -179,201 +156,35 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Widget _buildTutorialDialog() {
-    if (!_showTutorial) return const SizedBox.shrink();
-
-    final currentStep = _tutorialSteps[_currentStep];
-    final position = currentStep['position'] as String;
-
-    double top = 100;
-    double left = 20;
-    String arrowPosition = 'bottom';
-    double arrowOffset = 20;
-
-    switch (position) {
-      case 'top-right':
-        top = 80;
-        left = MediaQuery.of(context).size.width - 240;
-        arrowPosition = 'bottom';
-        arrowOffset = 30;
-        break;
-      case 'top-center':
-        top = 150;
-        left = MediaQuery.of(context).size.width / 2 - 110;
-        arrowPosition = 'bottom';
-        arrowOffset = 110;
-        break;
-      case 'bottom-right':
-        top = MediaQuery.of(context).size.height - 180;
-        left = MediaQuery.of(context).size.width - 240;
-        arrowPosition = 'left';
-        arrowOffset = 50;
-        break;
-      case 'center':
-        top = MediaQuery.of(context).size.height / 2 - 90;
-        left = MediaQuery.of(context).size.width / 2 - 110;
-        arrowPosition = 'bottom';
-        arrowOffset = 110;
-        break;
-      case 'center-left':
-        top = MediaQuery.of(context).size.height / 2 - 90;
-        left = 20;
-        arrowPosition = 'bottom';
-        arrowOffset = 30;
-        break;
-      case 'center-right':
-        top = MediaQuery.of(context).size.height / 2 - 90;
-        left = MediaQuery.of(context).size.width - 240;
-        arrowPosition = 'bottom';
-        arrowOffset = 30;
-        break;
-      case 'bottom-center':
-        top = MediaQuery.of(context).size.height - 150;
-        left = MediaQuery.of(context).size.width / 2 - 110;
-        arrowPosition = 'top';
-        arrowOffset = 110;
-        break;
+  String _formatSize(int bytes) {
+    if (bytes == 0) return '0 MB';
+    const suffixes = ['B', 'KB', 'MB', 'GB'];
+    var i = 0;
+    var size = bytes.toDouble();
+    while (size >= 1024 && i < suffixes.length - 1) {
+      size /= 1024;
+      i++;
     }
-
-    return Positioned(
-      top: top,
-      left: left,
-      child: Material(
-        color: Colors.transparent,
-        elevation: 8,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Container(
-              width: 240,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.lightSurface,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '${_currentStep + 1}/${_tutorialSteps.length}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        onPressed: _skipTutorial,
-                        icon: const Icon(Icons.close, size: 18),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        color: Colors.grey,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    currentStep['title'],
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textMain,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    currentStep['message'],
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textMain,
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _nextTutorialStep,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                      ),
-                      child: Text(
-                        _currentStep < _tutorialSteps.length - 1 ? 'Next →' : 'Get Started!',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Arrow
-            if (arrowPosition == 'bottom')
-              Positioned(
-                bottom: -8,
-                left: arrowOffset,
-                child: Icon(Icons.arrow_drop_down, size: 24, color: AppColors.lightSurface),
-              ),
-            if (arrowPosition == 'top')
-              Positioned(
-                top: -8,
-                left: arrowOffset,
-                child: Transform.rotate(
-                  angle: 3.14,
-                  child: Icon(Icons.arrow_drop_down, size: 24, color: AppColors.lightSurface),
-                ),
-              ),
-            if (arrowPosition == 'left')
-              Positioned(
-                left: -8,
-                top: arrowOffset,
-                child: Transform.rotate(
-                  angle: 1.57,
-                  child: Icon(Icons.arrow_drop_down, size: 24, color: AppColors.lightSurface),
-                ),
-              ),
-            if (arrowPosition == 'right')
-              Positioned(
-                right: -8,
-                top: arrowOffset,
-                child: Transform.rotate(
-                  angle: -1.57,
-                  child: Icon(Icons.arrow_drop_down, size: 24, color: AppColors.lightSurface),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
+    return '${size.toStringAsFixed(1)} ${suffixes[i]}';
   }
 
-  // Helper method for guest users
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+
+    if (diff.inDays > 7) {
+      return '${date.day}/${date.month}/${date.year}';
+    } else if (diff.inDays > 0) {
+      return '${diff.inDays} day${diff.inDays > 1 ? 's' : ''} ago';
+    } else if (diff.inHours > 0) {
+      return '${diff.inHours} hour${diff.inHours > 1 ? 's' : ''} ago';
+    } else if (diff.inMinutes > 0) {
+      return '${diff.inMinutes} minute${diff.inMinutes > 1 ? 's' : ''} ago';
+    } else {
+      return 'Just now';
+    }
+  }
+
   void showLockedFeatureDialog(BuildContext context, String feature, bool isDarkMode) {
     showDialog(
       context: context,
@@ -471,6 +282,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isGuest = authProvider.isGuest;
     final isDarkMode = themeProvider.isDarkMode;
+    final screenSize = MediaQuery.of(context).size;
+
+    // Initialize button position to bottom-right
+    if (_buttonPosition == Offset(0, 0)) {
+      _buttonPosition = Offset(screenSize.width - 80, screenSize.height - 80);
+    }
 
     if (_isLoading) {
       return Scaffold(
@@ -551,7 +368,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                     ],
                                   ),
-                                  // Profile Icon
                                   if (!isGuest)
                                     GestureDetector(
                                       onTap: () {
@@ -717,21 +533,21 @@ class _HomeScreenState extends State<HomeScreen> {
                                   color: AppColors.secondary,
                                 ),
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 20),
                               Row(
                                 children: [
                                   Expanded(
                                     child: _buildEqualQuickAction(
-                                      icon: Icons.video_library_rounded,
-                                      label: 'Library',
-                                      subtitle: 'Manage your downloads',
+                                      icon: Icons.history_rounded,
+                                      label: 'Download History',
+                                      subtitle: 'View all your downloads',
                                       color: AppColors.primary,
                                       isLocked: isGuest,
                                       onTap: () {
                                         if (isGuest) {
-                                          showLockedFeatureDialog(context, 'Library', isDarkMode);
+                                          showLockedFeatureDialog(context, 'Download History', isDarkMode);
                                         } else {
-                                          Navigator.pushNamed(context, '/library');
+                                          Navigator.pushNamed(context, '/download_library');
                                         }
                                       },
                                     ),
@@ -755,10 +571,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
 
-                        const SizedBox(height: 25),
+                        const SizedBox(height: 45),
 
-                        // Recent Downloads Section
-                        // Recent Downloads Section - FIXED VERSION
+                        // Recent Downloads Section - REAL DATA ONLY
                         Container(
                           margin: const EdgeInsets.symmetric(horizontal: 20),
                           padding: const EdgeInsets.all(20),
@@ -798,20 +613,30 @@ class _HomeScreenState extends State<HomeScreen> {
                                   subtitle: 'Sign up to start downloading videos!',
                                   isDarkMode: isDarkMode,
                                 )
+                              else if (_recentDownloads.isEmpty)
+                                _buildEmptyState(
+                                  icon: Icons.download_for_offline_outlined,
+                                  title: 'No downloads yet',
+                                  subtitle: 'Tap the download button to get started!',
+                                  isDarkMode: isDarkMode,
+                                )
                               else
                                 Column(
-                                  children: [
-                                    _buildDownloadItem('Video_001.mp4', '12 MB', Icons.video_file_rounded, isDarkMode),
-                                    _buildDownloadItem('Short_Clip.mp4', '8 MB', Icons.movie_rounded, isDarkMode),
-                                    _buildDownloadItem('Tutorial.mp4', '45 MB', Icons.school_rounded, isDarkMode),
-                                    _buildDownloadItem('Music_Video.mp4', '32 MB', Icons.music_video_rounded, isDarkMode),
-                                  ],
+                                  children: _recentDownloads.map((download) {
+                                    return _buildDownloadItem(
+                                      title: download['title'],
+                                      size: _formatSize(download['size']),
+                                      platform: download['platform'],
+                                      date: _formatDate(download['timestamp']),
+                                      isDarkMode: isDarkMode,
+                                    );
+                                  }).toList(),
                                 ),
                             ],
                           ),
                         ),
 
-                        const SizedBox(height: 80),
+                        const SizedBox(height: 50),
                       ],
                     ),
                   ),
@@ -845,52 +670,87 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // Floating Action Button
+          // 🔥 CUSTOM DRAGGABLE FLOATING BUTTON
           Positioned(
-            right: 20,
-            bottom: 100,
-            child: FloatingActionButton(
-              onPressed: () {
-                if (isGuest) {
-                  showLockedFeatureDialog(context, 'Download', isDarkMode);
-                } else {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const PlatformSelectionScreen(),
-                    ),
-                  );
-                }
+            left: _buttonPosition.dx,
+            top: _buttonPosition.dy,
+            child: GestureDetector(
+              onPanStart: (_) {
+                setState(() {
+                  _isDragging = true;
+                });
               },
-              backgroundColor: isGuest ? Colors.grey : AppColors.primary,
-              foregroundColor: AppColors.lightSurface,
-              elevation: 8,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Stack(
-                children: [
-                  const Icon(
-                    Icons.download_rounded,
-                    size: 28,
-                  ),
-                  if (isGuest)
-                    const Positioned(
-                      right: 0,
-                      top: 0,
-                      child: Icon(
-                        Icons.lock,
-                        size: 12,
-                        color: Colors.white70,
-                      ),
+              onPanUpdate: (details) {
+                setState(() {
+                  double newX = _buttonPosition.dx + details.delta.dx;
+                  double newY = _buttonPosition.dy + details.delta.dy;
+
+                  // Keep within screen bounds
+                  newX = newX.clamp(0.0, screenSize.width - 70);
+                  newY = newY.clamp(
+                      kToolbarHeight + 20,
+                      screenSize.height - 100
+                  );
+
+                  _buttonPosition = Offset(newX, newY);
+                });
+              },
+              onPanEnd: (_) {
+                setState(() {
+                  _isDragging = false;
+                });
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  boxShadow: _isDragging ? [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 10,
+                      spreadRadius: 2,
                     ),
-                ],
+                  ] : null,
+                ),
+                child: FloatingActionButton(
+                  onPressed: _isDragging ? null : () {
+                    if (isGuest) {
+                      showLockedFeatureDialog(context, 'Download', isDarkMode);
+                    } else {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const PlatformSelectionScreen(),
+                        ),
+                      );
+                    }
+                  },
+                  backgroundColor: isGuest ? Colors.grey : AppColors.primary,
+                  foregroundColor: AppColors.lightSurface,
+                  elevation: 8,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Stack(
+                    children: [
+                      const Icon(
+                        Icons.download_rounded,
+                        size: 28,
+                      ),
+                      if (isGuest)
+                        const Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Icon(
+                            Icons.lock,
+                            size: 12,
+                            color: Colors.white70,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
-
-          // Tutorial Dialog
-          _buildTutorialDialog(),
         ],
       ),
     );
@@ -903,7 +763,7 @@ class _HomeScreenState extends State<HomeScreen> {
     required bool isDarkMode,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20),
+      padding: const EdgeInsets.symmetric(vertical: 30),
       child: Column(
         children: [
           Icon(
@@ -915,8 +775,8 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             title,
             style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
               color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
             ),
           ),
@@ -925,7 +785,7 @@ class _HomeScreenState extends State<HomeScreen> {
             subtitle,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
             ),
           ),
@@ -943,75 +803,73 @@ class _HomeScreenState extends State<HomeScreen> {
     bool isLocked = false,
   }) {
     return Expanded(
-      child: SizedBox(
+      child: Container(
         height: 130,
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: isLocked ? Colors.grey[100] : AppColors.lightSurface,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-            border: Border.all(
-              color: AppColors.accent.withOpacity(0.1),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isLocked ? Colors.grey[100] : AppColors.lightSurface,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
+          ],
+          border: Border.all(
+            color: AppColors.accent.withOpacity(0.1),
           ),
-          child: Stack(
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      icon,
-                      color: isLocked ? Colors.grey : color,
-                      size: 20,
-                    ),
+        ),
+        child: Stack(
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    value,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: isLocked ? Colors.grey : color,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-              if (isLocked)
-                const Positioned(
-                  top: 4,
-                  right: 4,
                   child: Icon(
-                    Icons.lock,
-                    size: 14,
-                    color: Colors.grey,
+                    icon,
+                    color: isLocked ? Colors.grey : color,
+                    size: 20,
                   ),
                 ),
-            ],
-          ),
+                const SizedBox(height: 10),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: isLocked ? Colors.grey : color,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+            if (isLocked)
+              const Positioned(
+                top: 4,
+                right: 4,
+                child: Icon(
+                  Icons.lock,
+                  size: 14,
+                  color: Colors.grey,
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -1028,7 +886,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 140,
+        height: 150,
         decoration: BoxDecoration(
           color: isLocked ? Colors.grey[50] : color.withOpacity(0.05),
           borderRadius: BorderRadius.circular(16),
@@ -1040,7 +898,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Stack(
           children: [
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1073,7 +931,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text(
                         label,
                         style: TextStyle(
-                          fontSize: 15,
+                          fontSize: 14,
                           fontWeight: FontWeight.bold,
                           color: isLocked ? Colors.grey : AppColors.secondary,
                         ),
@@ -1082,7 +940,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text(
                         subtitle,
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 11,
                           color: Colors.grey[600],
                         ),
                       ),
@@ -1097,7 +955,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 right: 8,
                 child: Icon(
                   Icons.lock,
-                  size: 16,
+                  size: 14,
                   color: Colors.grey,
                 ),
               ),
@@ -1107,9 +965,33 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildDownloadItem(String title, String size, IconData icon, bool isDarkMode) {
+  Widget _buildDownloadItem({
+    required String title,
+    required String size,
+    required String platform,
+    required String date,
+    required bool isDarkMode,
+  }) {
+    IconData platformIcon = Icons.video_file_rounded;
+    switch (platform.toLowerCase()) {
+      case 'youtube':
+        platformIcon = Icons.play_circle_filled;
+        break;
+      case 'instagram':
+        platformIcon = Icons.camera_alt;
+        break;
+      case 'tiktok':
+        platformIcon = Icons.music_note;
+        break;
+      case 'facebook':
+        platformIcon = Icons.facebook;
+        break;
+      default:
+        platformIcon = Icons.video_file_rounded;
+    }
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isDarkMode ? const Color(0xFF2C2C2C) : Colors.grey[50],
@@ -1125,7 +1007,7 @@ class _HomeScreenState extends State<HomeScreen> {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
-              icon,
+              platformIcon,
               color: AppColors.primary,
               size: 20,
             ),
@@ -1142,11 +1024,20 @@ class _HomeScreenState extends State<HomeScreen> {
                     fontWeight: FontWeight.w600,
                     color: isDarkMode ? AppColors.lightSurface : AppColors.textMain,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  size,
+                  '$size • $platform',
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 11,
+                    color: Colors.grey,
+                  ),
+                ),
+                Text(
+                  date,
+                  style: const TextStyle(
+                    fontSize: 10,
                     color: Colors.grey,
                   ),
                 ),
@@ -1156,14 +1047,14 @@ class _HomeScreenState extends State<HomeScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: Colors.green.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Text(
-              'Completed',
+              'Saved',
               style: TextStyle(
                 fontSize: 10,
-                color: AppColors.primary,
+                color: Colors.green,
                 fontWeight: FontWeight.bold,
               ),
             ),

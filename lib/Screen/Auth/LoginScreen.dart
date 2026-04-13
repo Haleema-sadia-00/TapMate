@@ -64,11 +64,9 @@ class _LoginScreenState extends State<LoginScreen> {
         );
 
         if (result['success'] == true) {
-          // 🔥🔥🔥 SAVE LOGIN FLAG HERE 🔥🔥🔥
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('isLoggedIn', true);
 
-          // Check if user is new (first time login)
           bool isFirstTimeLogin = result['isFirstTime'] ?? true;
           if (isFirstTimeLogin) {
             await prefs.setBool('isNewUser', true);
@@ -88,11 +86,10 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             );
 
-            // 🔥 YAHAN SE PURANA CODE HATAO AUR YEH LAGAO
-            // AuthWrapper decide karega next screen
+            // 🔥 SIRF YEH LINE CHANGE HUI - AuthWrapper ki jagah HomeScreen
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) => const AuthWrapper()),
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
             );
           }
         } else {

@@ -1,4 +1,4 @@
-// screens/settings_screen.dart (TOP PAR YEH IMPORTS LAGAO)
+// screens/settings_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -6,14 +6,14 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 
-// ✅ YEH TUMHARI USER MODEL FILE
 import '../../auth_provider.dart';
 import '../../theme_provider.dart';
+
+import '../../utils/guide_manager.dart';
 import '../../utils/settings_provider.dart';
 import '../Auth/LoginScreen.dart';
 import '../models/settings_user_model.dart';
 import '../services/cloudinary_settingservice.dart';
-import '../utils/guide_manager.dart';
 import 'blocked_users_screen.dart';
 import 'follow_requests_screen.dart';
 
@@ -32,7 +32,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _dataSaver = false;
   bool _autoBackup = false;
   String _language = 'English';
-  String _downloadQuality = '720p';
   String _storageLocation = 'Phone Storage';
   bool _emailNotifications = true;
   bool _marketingEmails = false;
@@ -51,7 +50,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     _cloudinary.init();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<SettingsProvider>(context, listen: false).init();
+      final provider = Provider.of<SettingsProvider>(context, listen: false);
+      provider.init();
       _syncWithProvider();
     });
   }
@@ -72,7 +72,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _darkMode = user.darkMode;
         _dataSaver = user.dataSaver;
         _language = user.language;
-        _downloadQuality = user.downloadQuality;
         _storageLocation = user.storageLocation;
         _isPrivateAccount = user.isPrivate;
         _showOnlineStatus = user.showOnlineStatus;
@@ -109,13 +108,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _isPrivateAccount = value);
     try {
       await Provider.of<SettingsProvider>(context, listen: false).togglePrivateAccount(value);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(value ? 'Account is now private' : 'Account is now public')),
-        );
-      }
     } catch (e) {
       setState(() => _isPrivateAccount = !value);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -176,6 +175,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     Map<String, dynamic> updates = {};
     if (_fullNameController.text != user.fullName) updates['fullName'] = _fullNameController.text;
     if (_bioController.text != user.bio) updates['bio'] = _bioController.text;
+    if (_usernameController.text != user.username) updates['username'] = _usernameController.text;
 
     if (updates.isNotEmpty) {
       await provider.updateSettings(updates);
@@ -252,9 +252,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               : 'No pending requests',
                           theme: theme,
                           onTap: () {
-                            if (settingsProvider.pendingRequestsCount > 0) {
-                              Navigator.push(context, MaterialPageRoute(builder: (_) => FollowRequestsScreen()));
-                            }
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const FollowRequestsScreen())
+                            );
                           },
                           badgeCount: settingsProvider.pendingRequestsCount,
                         ),
@@ -326,14 +327,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _buildSettingsCard(
                       theme: theme,
                       children: [
-                        _buildSettingsTile(
-                          icon: Icons.hd_outlined,
-                          title: 'Video Quality',
-                          subtitle: _downloadQuality,
-                          theme: theme,
-                          onTap: () => _showQualitySelector(theme),
-                        ),
-                        Divider(),
                         _buildSettingsTile(
                           icon: Icons.folder_open,
                           title: 'Storage Location',
@@ -698,16 +691,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: Text('Private Account'),
                   subtitle: Text(_isPrivateAccount ? 'Only approved followers can see your posts' : 'Anyone can follow you'),
                   value: _isPrivateAccount,
-                  onChanged: _togglePrivateAccount,
+                  onChanged: (value) {
+                    _togglePrivateAccount(value);
+                  },
                   activeColor: theme.colorScheme.primary,
                 ),
                 Divider(),
                 SwitchListTile(
                   title: Text('Show Online Status'),
                   value: _showOnlineStatus,
-                  onChanged: (value) async {
-                    setState(() => this._showOnlineStatus = value);
-                    await _updateSetting('showOnlineStatus', value);
+                  onChanged: (value) {
+                    setState(() {
+                      _showOnlineStatus = value;
+                    });
+                    _updateSetting('showOnlineStatus', value);
                   },
                   activeColor: theme.colorScheme.primary,
                 ),
@@ -715,9 +712,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 SwitchListTile(
                   title: Text('Allow Tagging'),
                   value: _allowTagging,
-                  onChanged: (value) async {
-                    setState(() => _allowTagging = value);
-                    await _updateSetting('allowTagging', value);
+                  onChanged: (value) {
+                    setState(() {
+                      _allowTagging = value;
+                    });
+                    _updateSetting('allowTagging', value);
                   },
                   activeColor: theme.colorScheme.primary,
                 ),
@@ -725,16 +724,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 SwitchListTile(
                   title: Text('Allow Comments'),
                   value: _allowComments,
-                  onChanged: (value) async {
-                    setState(() => _allowComments = value);
-                    await _updateSetting('allowComments', value);
+                  onChanged: (value) {
+                    setState(() {
+                      _allowComments = value;
+                    });
+                    _updateSetting('allowComments', value);
                   },
                   activeColor: theme.colorScheme.primary,
                 ),
               ],
             ),
           ),
-          actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text('Close'))],
+          actions: [
+            TextButton(
+              onPressed: () {
+                _syncWithProvider();
+                Navigator.pop(context);
+              },
+              child: Text('Close'),
+            ),
+          ],
         ),
       ),
     );
@@ -756,7 +765,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: Text('Email Notifications'),
                   value: _emailNotifications,
                   onChanged: (value) async {
-                    setState(() => this._emailNotifications = value);
+                    setState(() => _emailNotifications = value);
                     await _updateSetting('emailNotifications', value);
                   },
                   activeColor: theme.colorScheme.primary,
@@ -766,7 +775,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: Text('Marketing Emails'),
                   value: _marketingEmails,
                   onChanged: (value) async {
-                    setState(() => this._marketingEmails = value);
+                    setState(() => _marketingEmails = value);
                     await _updateSetting('marketingEmails', value);
                   },
                   activeColor: theme.colorScheme.primary,
@@ -864,50 +873,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(label, style: TextStyle(color: Colors.grey)), Text(value, style: TextStyle(fontWeight: FontWeight.w600))]),
     );
-  }
-
-  void _showQualitySelector(ThemeData theme) {
-    final qualities = ['360p', '480p', '720p', '1080p'];
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: theme.dialogBackgroundColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Select Video Quality', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            SizedBox(height: 20),
-            ...qualities.map((quality) => _buildQualityOption(quality, theme)).toList(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQualityOption(String quality, ThemeData theme) {
-    final isSelected = _downloadQuality == quality;
-    return ListTile(
-      title: Text(quality),
-      subtitle: Text(_getQualityDescription(quality)),
-      trailing: isSelected ? Icon(Icons.check, color: theme.colorScheme.primary) : null,
-      onTap: () async {
-        setState(() => _downloadQuality = quality);
-        await _updateSetting('downloadQuality', quality);
-        if (mounted) Navigator.pop(context);
-      },
-    );
-  }
-
-  String _getQualityDescription(String quality) {
-    switch (quality) {
-      case '360p': return 'Low quality, small file size';
-      case '480p': return 'Standard definition';
-      case '720p': return 'HD quality (recommended)';
-      case '1080p': return 'Full HD, large file size';
-      default: return 'Recommended quality';
-    }
   }
 
   void _showStorageLocationSelector(ThemeData theme) {
@@ -1066,7 +1031,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           width: double.maxFinite,
           height: 400,
           child: StreamBuilder<List<Map<String, dynamic>>>(
-            stream: provider.settingsService.getFAQs(), // ✅ FIXED: settingsService public hai
+            stream: provider.settingsService.getFAQs(),
             builder: (context, snapshot) {
               if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
               if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
@@ -1189,7 +1154,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           width: double.maxFinite,
           constraints: BoxConstraints(maxHeight: 400),
           child: StreamBuilder<Map<String, dynamic>>(
-            stream: provider.settingsService.getAppInfo(), // ✅ FIXED: settingsService public hai
+            stream: provider.settingsService.getAppInfo(),
             builder: (context, snapshot) {
               if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
               if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
@@ -1213,7 +1178,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     if (appInfo['showAnnouncement'] == true)
                       Padding(padding: const EdgeInsets.all(8.0), child: Text(appInfo['announcement'] ?? '', style: TextStyle(fontWeight: FontWeight.bold))),
                     SizedBox(height: 10),
-                    Text('Images delivered via Cloudinary CDN', style: TextStyle(fontSize: 12, color: Colors.grey, fontStyle: FontStyle.italic)),
                   ],
                 ),
               );
@@ -1253,7 +1217,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           width: double.maxFinite,
           constraints: BoxConstraints(maxHeight: 300),
           child: StreamBuilder<Map<String, dynamic>>(
-            stream: provider.settingsService.getAppInfo(), // ✅ FIXED: settingsService public hai
+            stream: provider.settingsService.getAppInfo(),
             builder: (context, snapshot) {
               final policy = snapshot.data?['privacyPolicy'] ?? 'Privacy policy not available.';
               return SingleChildScrollView(child: Text(policy));
@@ -1268,22 +1232,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showLogoutDialog(ThemeData theme, AuthProvider authProvider) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: theme.dialogBackgroundColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text('Log Out'),
         content: Text('Are you sure you want to log out?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.of(dialogContext).pop();
+              await Future.delayed(Duration(milliseconds: 50));
+
+              if (!mounted) return;
+
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (ctx) => const Center(
+                  child: Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 20),
+                          Text('Logging out...'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+
               final prefs = await SharedPreferences.getInstance();
               await prefs.setBool('isLoggedIn', false);
               await prefs.setBool('isNewUser', true);
               await authProvider.logout();
+
               if (mounted) {
-                Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => LoginScreen()), (route) => false);
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => LoginScreen()),
+                      (route) => false,
+                );
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),

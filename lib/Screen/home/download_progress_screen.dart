@@ -119,7 +119,7 @@ class _DownloadProgressScreenState extends State<DownloadProgressScreen> {
                         Navigator.pop(ctx);
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const LibraryScreen()),
+                          MaterialPageRoute(builder: (context) => const DownloadLibraryScreen()),
                         );
                       },
                       child: const Text('Open Library'),
@@ -393,7 +393,7 @@ class _DownloadProgressScreenState extends State<DownloadProgressScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const LibraryScreen(),
+                              builder: (context) => const DownloadLibraryScreen(),
                             ),
                           );
                         },

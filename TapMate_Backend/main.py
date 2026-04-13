@@ -118,11 +118,11 @@ def _get_facebook_video_url(url: str) -> dict:
             'Referer': 'https://www.facebook.com/',
             'Accept-Language': 'en-US,en;q=0.9',
         }
-        
+
         request = urllib.request.Request(url, headers=headers)
         with urllib.request.urlopen(request, timeout=20) as response:
             html_content = response.read().decode('utf-8', errors='ignore')
-            
+
             # Try to extract video URL from HTML
             import re
             patterns = [
@@ -131,64 +131,90 @@ def _get_facebook_video_url(url: str) -> dict:
                 r'"src":"(https://[^"]+video[^"]+)"',
                 r'href="(https://www\.facebook\.com/watch/?\?v=\d+)"',
             ]
-            
+
             for pattern in patterns:
                 match = re.search(pattern, html_content)
                 if match:
                     video_url = match.group(1)
                     video_url = video_url.replace('\\/', '/')
                     return {'video_url': video_url, 'error': None}
-        
+
         return {'video_url': None, 'error': 'Could not extract video URL from Facebook page'}
     except Exception as e:
         return {'video_url': None, 'error': str(e)}
 
 
+# 🔥 FIXED: Improved TikTok download function
 def _download_tiktok_via_tikwm(url: str, task_id: str):
+    """Download TikTok video using TikWM API - IMPROVED VERSION"""
+
+    # Clean URL first
+    url = url.strip()
+
+    # Resolve short TikTok links
+    if 'vm.tiktok.com' in url or 'vt.tiktok.com' in url:
+        try:
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=10) as response:
+                url = response.geturl()
+        except:
+            pass
+
     payload = urllib.parse.urlencode({'url': url, 'hd': '1'}).encode('utf-8')
     headers = {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': (
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
-            'AppleWebKit/537.36 (KHTML, like Gecko) '
-            'Chrome/124.0.0.0 Safari/537.36'
-        ),
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'application/json',
+        'Origin': 'https://tikwm.com',
+        'Referer': 'https://tikwm.com/',
     }
 
-    request = urllib.request.Request('https://www.tikwm.com/api/', data=payload, headers=headers)
-    with urllib.request.urlopen(request, timeout=30) as response:
-        body = response.read().decode('utf-8', errors='ignore')
-        parsed = json.loads(body)
+    # Try multiple API endpoints
+    api_urls = [
+        'https://tikwm.com/api/',
+        'https://www.tikwm.com/api/',
+    ]
 
-    if parsed.get('code') != 0:
-        raise Exception(f"TikWM API error: {parsed.get('msg', 'unknown')}")
+    last_error = None
 
-    data = parsed.get('data') or {}
-    video_url = data.get('hdplay') or data.get('play') or data.get('wmplay')
-    if not video_url:
-        raise Exception('TikWM did not return a playable video URL')
+    for api_url in api_urls:
+        try:
+            request = urllib.request.Request(api_url, data=payload, headers=headers)
+            with urllib.request.urlopen(request, timeout=30) as response:
+                body = response.read().decode('utf-8', errors='ignore')
+                parsed = json.loads(body)
 
-    title = data.get('title') or f'tiktok_{task_id}'
-    safe_title = _sanitize_filename(title)[:80]
-    filename = f"{safe_title}_{task_id}.mp4"
-    filepath = os.path.join(DOWNLOAD_DIR, filename)
+                if parsed.get('code') == 0:
+                    data = parsed.get('data') or {}
+                    video_url = data.get('hdplay') or data.get('play') or data.get('wmplay')
+                    if video_url:
+                        title = data.get('title') or f'tiktok_{task_id}'
+                        safe_title = _sanitize_filename(title)[:80]
+                        filename = f"{safe_title}_{task_id}.mp4"
+                        filepath = os.path.join(DOWNLOAD_DIR, filename)
 
-    video_request = urllib.request.Request(
-        video_url,
-        headers={
-            'User-Agent': headers['User-Agent'],
-            'Referer': 'https://www.tiktok.com/',
-        },
-    )
+                        video_req = urllib.request.Request(
+                            video_url,
+                            headers={
+                                'User-Agent': headers['User-Agent'],
+                                'Referer': 'https://www.tiktok.com/',
+                            },
+                        )
 
-    with urllib.request.urlopen(video_request, timeout=60) as source, open(filepath, 'wb') as destination:
-        shutil.copyfileobj(source, destination)
+                        with urllib.request.urlopen(video_req, timeout=60) as source, open(filepath, 'wb') as dest:
+                            shutil.copyfileobj(source, dest)
 
-    return {
-        'title': title,
-        'filename': filename,
-        'filepath': filepath,
-    }
+                        return {
+                            'title': title,
+                            'filename': filename,
+                            'filepath': filepath,
+                        }
+        except Exception as e:
+            last_error = str(e)
+            continue
+
+    raise Exception(f"TikTok download failed: {last_error}")
+
 
 @app.get("/")
 async def root():
@@ -257,7 +283,7 @@ async def download_video(request: DownloadRequest):
                 },
             },
         })
-    
+
     if is_facebook:
         ydl_opts.update({
             'no_warnings': True,
@@ -280,7 +306,7 @@ async def download_video(request: DownloadRequest):
 
     except Exception as e:
         error_msg = str(e)
-        
+
         if is_tiktok:
             try:
                 fallback = _download_tiktok_via_tikwm(normalized_url, task_id)
@@ -297,7 +323,7 @@ async def download_video(request: DownloadRequest):
                     status_code=400,
                     detail=f"TikTok download failed. yt-dlp: {str(e)} | fallback: {str(fallback_error)}",
                 )
-        
+
         if is_facebook:
             # Try direct Facebook video extraction as fallback
             try:
@@ -307,7 +333,7 @@ async def download_video(request: DownloadRequest):
                     try:
                         filename = f"facebook_video_{task_id}.mp4"
                         filepath = os.path.join(DOWNLOAD_DIR, filename)
-                        
+
                         video_request = urllib.request.Request(
                             fb_result['video_url'],
                             headers={
@@ -318,10 +344,10 @@ async def download_video(request: DownloadRequest):
                                 'Referer': 'https://www.facebook.com/',
                             },
                         )
-                        
+
                         with urllib.request.urlopen(video_request, timeout=60) as source, open(filepath, 'wb') as destination:
                             shutil.copyfileobj(source, destination)
-                        
+
                         return {
                             'success': True,
                             'task_id': task_id,

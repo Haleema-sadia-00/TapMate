@@ -1,7 +1,13 @@
+import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tapmate/Screen/constants/app_colors.dart';
 import 'package:tapmate/Screen/home/storage_selection_dialog.dart';
 import 'package:tapmate/Screen/services/platform_downloader.dart';
+import 'package:tapmate/Screen/home/library_screen.dart';
 
 class YouTubeDownloaderScreen extends StatefulWidget {
   const YouTubeDownloaderScreen({super.key});
@@ -10,14 +16,38 @@ class YouTubeDownloaderScreen extends StatefulWidget {
   State<YouTubeDownloaderScreen> createState() => _YouTubeDownloaderScreenState();
 }
 
-class _YouTubeDownloaderScreenState extends State<YouTubeDownloaderScreen> {
+class _YouTubeDownloaderScreenState extends State<YouTubeDownloaderScreen>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _linkController = TextEditingController();
   String _platformName = 'YouTube';
   bool _isDownloading = false;
   bool _autoDownloadQueued = false;
   double _progress = 0;
-  String _status = 'Paste a YouTube link and tap Download';
+  String _status = 'Ready to download';
   String? _savedFilePath;
+  String _downloadSpeed = '';
+  String _eta = '';
+  int _downloadedBytes = 0;
+  int _totalBytes = 0;
+  late AnimationController _animationController;
+  late Animation<double> _pulseAnimation;
+
+  String _storageInfo = '';
+  bool _hasStoragePermission = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(seconds: 1),
+      vsync: this,
+    )..repeat(reverse: true);
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+    _checkStoragePermission();
+    _getStorageInfo();
+  }
 
   @override
   void didChangeDependencies() {
@@ -38,7 +68,7 @@ class _YouTubeDownloaderScreenState extends State<YouTubeDownloaderScreen> {
       final autoDownload = args['autoDownload'] == true;
       final capturedAtRaw = args['capturedAt']?.toString();
       if (capturedAtRaw != null && capturedAtRaw.isNotEmpty) {
-        _status = 'Captured at $capturedAtRaw. Preparing download...';
+        _status = 'Captured at $capturedAtRaw. Ready to download';
       }
 
       if (autoDownload && !_autoDownloadQueued && initialUrl.isNotEmpty) {
@@ -53,8 +83,64 @@ class _YouTubeDownloaderScreenState extends State<YouTubeDownloaderScreen> {
 
   @override
   void dispose() {
+    _animationController.dispose();
     _linkController.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkStoragePermission() async {
+    if (Platform.isAndroid) {
+      final status = await Permission.storage.status;
+      setState(() {
+        _hasStoragePermission = status.isGranted;
+      });
+
+      if (!status.isGranted) {
+        final result = await Permission.storage.request();
+        setState(() {
+          _hasStoragePermission = result.isGranted;
+        });
+      }
+    } else {
+      setState(() {
+        _hasStoragePermission = true;
+      });
+    }
+  }
+
+  Future<void> _getStorageInfo() async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final stats = await directory.stat();
+
+      final totalSpace = Platform.isAndroid
+          ? await _getTotalStorageSpace()
+          : 64 * 1024 * 1024 * 1024;
+
+      final freeSpace = stats.size;
+      final freeGB = (freeSpace / (1024 * 1024 * 1024)).toStringAsFixed(1);
+      final totalGB = (totalSpace / (1024 * 1024 * 1024)).toStringAsFixed(1);
+
+      setState(() {
+        _storageInfo = '📱 Free: $freeGB GB / Total: $totalGB GB';
+      });
+    } catch (e) {
+      setState(() {
+        _storageInfo = 'Storage info unavailable';
+      });
+    }
+  }
+
+  Future<int> _getTotalStorageSpace() async {
+    try {
+      final directory = await getExternalStorageDirectory();
+      if (directory != null) {
+        return 128 * 1024 * 1024 * 1024;
+      }
+    } catch (e) {
+      // Ignore
+    }
+    return 64 * 1024 * 1024 * 1024;
   }
 
   Future<void> _downloadVideo() async {
@@ -104,30 +190,60 @@ class _YouTubeDownloaderScreenState extends State<YouTubeDownloaderScreen> {
       _isDownloading = true;
       _progress = 0;
       _savedFilePath = null;
+      _downloadSpeed = '';
+      _eta = '';
+      _downloadedBytes = 0;
+      _totalBytes = 0;
       _status = customPath != null
-          ? 'Starting download to selected folder...'
-          : 'Starting download...';
+          ? '📁 Downloading to selected folder...'
+          : '📁 Downloading...';
     });
 
     final downloader = PlatformDownloader();
     final platformId = _platformIdFromName(_platformName);
+    final startTime = DateTime.now();
 
     final result = await downloader.downloadVideo(
       platformId: platformId,
       videoUrl: url,
-      videoTitle: '${platformId}_video',
+      videoTitle: '${platformId}_video_${DateTime.now().millisecondsSinceEpoch}',
       format: format,
       quality: quality,
       customPath: customPath,
       onProgress: (progress) {
         if (!mounted) return;
+
+        final now = DateTime.now();
+        final elapsed = now.difference(startTime).inSeconds;
+        final downloadedMB = progress.downloadedBytes / (1024 * 1024);
+        final speed = elapsed == 0 ? 0 : downloadedMB / elapsed;
+
+        if (progress.totalBytes > 0 && speed > 0) {
+          final remainingBytes = progress.totalBytes - progress.downloadedBytes;
+          final etaSeconds = remainingBytes / (speed * 1024 * 1024);
+
+          setState(() {
+            _downloadSpeed = '⚡ ${speed.toStringAsFixed(1)} MB/s';
+            _eta = etaSeconds.isFinite && etaSeconds > 0
+                ? '⏱️ ${etaSeconds.toInt()} sec left'
+                : '';
+          });
+        } else if (speed > 0) {
+          setState(() {
+            _downloadSpeed = '⚡ ${speed.toStringAsFixed(1)} MB/s';
+          });
+        }
+
         setState(() {
           _progress = progress.progress.clamp(0.0, 1.0);
+          _downloadedBytes = progress.downloadedBytes;
+          _totalBytes = progress.totalBytes;
+
           final downloadedMb = (progress.downloadedBytes / (1024 * 1024)).toStringAsFixed(1);
           final totalMb = progress.totalBytes > 0
               ? (progress.totalBytes / (1024 * 1024)).toStringAsFixed(1)
               : '...';
-          _status = 'Downloading $downloadedMb MB / $totalMb MB';
+          _status = '📥 $downloadedMb MB / $totalMb MB';
         });
       },
     );
@@ -137,36 +253,73 @@ class _YouTubeDownloaderScreenState extends State<YouTubeDownloaderScreen> {
     setState(() {
       _isDownloading = false;
       _savedFilePath = result.filePath;
-      
+
       if (result.success) {
-        _status = customPath != null
-            ? 'Saved in selected folder'
-            : 'Saved in Download/TapMate/$platformId';
+        _status = '✅ Download complete!';
+        _progress = 1.0;
+
+        _saveToDownloadHistory(
+          platform: _platformName,
+          title: '${_platformName} Video',
+          filePath: result.filePath!,
+          size: _downloadedBytes,
+        );
       } else {
-        // Format error message based on platform
-        if (_platformName.toLowerCase() == 'facebook' && result.message.contains('backend')) {
-          _status = '❌ Facebook: Video might be private or protected. Try another video.';
-        } else if (_platformName.toLowerCase() == 'facebook') {
-          _status = '❌ Facebook: ${result.message}';
-        } else {
-          _status = result.message;
-        }
+        _status = '❌ ${result.message}';
       }
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          result.success 
-            ? '✅ Download complete!' 
-            : result.message.contains('facebook') || result.message.contains('private')
-              ? 'Facebook video download failed. Please check the video is public and not protected.'
-              : result.message
+        content: Row(
+          children: [
+            Icon(result.success ? Icons.check_circle : Icons.error,
+                color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(result.success
+                  ? 'Download complete! View in Library'
+                  : result.message),
+            ),
+            if (result.success)
+              TextButton(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/download_library');
+                },
+                child: const Text('VIEW', style: TextStyle(color: Colors.white)),
+              ),
+          ],
         ),
         backgroundColor: result.success ? Colors.green : Colors.red,
-        duration: Duration(seconds: result.success ? 2 : 4),
+        duration: const Duration(seconds: 3),
       ),
     );
+
+    _getStorageInfo();
+  }
+
+  Future<void> _saveToDownloadHistory({
+    required String platform,
+    required String title,
+    required String filePath,
+    required int size,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final history = prefs.getStringList('download_history') ?? [];
+      final newEntry = jsonEncode({
+        'id': DateTime.now().millisecondsSinceEpoch.toString(),
+        'platform': platform,
+        'title': title,
+        'filePath': filePath,
+        'size': size,
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+      history.add(newEntry);
+      await prefs.setStringList('download_history', history);
+    } catch (e) {
+      print('Error saving to history: $e');
+    }
   }
 
   bool _isValidUrlForPlatform(String input) {
@@ -188,7 +341,6 @@ class _YouTubeDownloaderScreenState extends State<YouTubeDownloaderScreen> {
     if (platform == 'twitter') {
       return value.contains('twitter.com') || value.contains('x.com');
     }
-
     return false;
   }
 
@@ -201,21 +353,9 @@ class _YouTubeDownloaderScreenState extends State<YouTubeDownloaderScreen> {
     return 'youtube';
   }
 
-  Color _platformColor() {
-    switch (_platformName.toLowerCase()) {
-      case 'instagram':
-        return const Color(0xFFE4405F);
-      case 'tiktok':
-        return const Color(0xFF111111);
-      case 'youtube':
-        return Colors.red;
-      case 'facebook':
-        return const Color(0xFF1877F2);
-      case 'twitter':
-        return const Color(0xFF1DA1F2);
-      default:
-        return AppColors.primary;
-    }
+  // 🔥 FIXED: Using TapMate consistent colors
+  Color _getTapMateColor() {
+    return AppColors.primary;
   }
 
   String _hintByPlatform() {
@@ -225,93 +365,284 @@ class _YouTubeDownloaderScreenState extends State<YouTubeDownloaderScreen> {
       case 'tiktok':
         return 'https://www.tiktok.com/@user/video/...';
       case 'youtube':
-        return 'https://www.youtube.com/shorts/GR_rQKROEGE';
+        return 'https://www.youtube.com/watch?v=...';
       case 'facebook':
         return 'https://www.facebook.com/reel/...';
       case 'twitter':
         return 'https://x.com/username/status/...';
       default:
-        return 'https://example.com/video/...';
+        return 'Paste video URL here...';
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final tapMateColor = _getTapMateColor();
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('$_platformName Downloader'),
-        backgroundColor: _platformColor(),
+        title: Text('${_platformName} Downloader'),
+        backgroundColor: tapMateColor,
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+          tooltip: 'Go back',
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.folder_open),
+            onPressed: () {
+              Navigator.pushNamed(context, '/download_library');
+            },
+            tooltip: 'Download Library',
+          ),
+        ],
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Paste video link',
-              style: TextStyle(color: AppColors.accent, fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _linkController,
-              minLines: 1,
-              maxLines: 2,
-              decoration: InputDecoration(
-                hintText: _hintByPlatform(),
-                border: OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.link),
-              ),
-            ),
-            if (_platformName.toLowerCase() == 'facebook') ...[
-              const SizedBox(height: 8),
-              Container(
+            // Storage Info Card
+            Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1877F2).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: const Color(0xFF1877F2).withOpacity(0.3),
-                  ),
-                ),
-                child: const Text(
-                  '💡 Tip: Facebook videos must be public. Private or protected videos cannot be downloaded.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF1877F2),
-                    fontWeight: FontWeight.w500,
-                  ),
+                child: Row(
+                  children: [
+                    Icon(_hasStoragePermission ? Icons.sd_storage : Icons.warning,
+                        color: _hasStoragePermission ? Colors.green : Colors.orange),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _storageInfo.isEmpty ? 'Checking storage...' : _storageInfo,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _hasStoragePermission ? Colors.green : Colors.orange,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
+
             const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: _isDownloading ? null : _downloadVideo,
-              icon: const Icon(Icons.download),
-              label: Text(_isDownloading ? 'Downloading...' : 'Choose Location & Download'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _platformColor(),
-                foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(48),
+
+            // Link Input Section
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: tapMateColor.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: tapMateColor.withOpacity(0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.link, color: tapMateColor, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Video Link',
+                        style: TextStyle(
+                          color: tapMateColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _linkController,
+                    minLines: 1,
+                    maxLines: 2,
+                    decoration: InputDecoration(
+                      hintText: _hintByPlatform(),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                      suffixIcon: _linkController.text.isNotEmpty
+                          ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          setState(() {
+                            _linkController.clear();
+                          });
+                        },
+                      )
+                          : null,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 24),
-            LinearProgressIndicator(
-              value: _isDownloading ? _progress : null,
-              minHeight: 8,
+
+            const SizedBox(height: 16),
+
+            // Download Button with Animation
+            AnimatedBuilder(
+              animation: _pulseAnimation,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: _isDownloading ? 1.0 : _pulseAnimation.value,
+                  child: ElevatedButton.icon(
+                    onPressed: _isDownloading ? null : _downloadVideo,
+                    icon: _isDownloading
+                        ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                        : const Icon(Icons.cloud_download),
+                    label: Text(_isDownloading ? 'Downloading...' : 'DOWNLOAD'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: tapMateColor,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
-            const SizedBox(height: 12),
-            Text(
-              _status,
-              style: const TextStyle(color: AppColors.textMain),
-            ),
-            if (_savedFilePath != null) ...[
-              const SizedBox(height: 10),
-              Text(
-                _savedFilePath!,
-                style: const TextStyle(fontSize: 12, color: AppColors.secondary),
+
+            const SizedBox(height: 20),
+
+            // Progress Section
+            if (_isDownloading || _progress > 0) ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '${(_progress * 100).toStringAsFixed(0)}%',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            if (_downloadSpeed.isNotEmpty)
+                              Text(_downloadSpeed, style: const TextStyle(fontSize: 12)),
+                            if (_eta.isNotEmpty)
+                              Text(_eta, style: const TextStyle(fontSize: 12)),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        value: _progress,
+                        minHeight: 8,
+                        backgroundColor: Colors.grey[200],
+                        valueColor: AlwaysStoppedAnimation<Color>(tapMateColor),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      _status,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _status.contains('✅') ? Colors.green :
+                        _status.contains('❌') ? Colors.red : Colors.grey[600],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    if (_savedFilePath != null && _savedFilePath!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: GestureDetector(
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Saved at: $_savedFilePath'),
+                                action: SnackBarAction(
+                                  label: 'VIEW',
+                                  onPressed: () {
+                                    Navigator.pushNamed(context, '/download_library');
+                                  },
+                                ),
+                              ),
+                            );
+                          },
+                          child: Row(
+                            children: [
+                              Icon(Icons.folder, size: 14, color: Colors.grey[600]),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  _savedFilePath!.split('/').last,
+                                  style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ],
+
+            const SizedBox(height: 16),
+
+            // Tips Section
+            Card(
+              elevation: 0,
+              color: Colors.amber[50],
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Icon(Icons.lightbulb, color: Colors.amber[700], size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _platformName.toLowerCase() == 'facebook'
+                            ? 'Facebook videos must be public.'
+                            : _platformName.toLowerCase() == 'instagram'
+                            ? 'Make sure the account is public'
+                            : _platformName.toLowerCase() == 'tiktok'
+                            ? 'Paste the share link from TikTok app'
+                            : 'Paste the full video URL to start downloading',
+                        style: TextStyle(fontSize: 12, color: Colors.amber[800]),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),

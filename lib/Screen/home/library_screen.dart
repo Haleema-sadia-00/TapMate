@@ -1,444 +1,443 @@
-
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../auth_provider.dart';
-import '../Auth/LoginScreen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import 'package:tapmate/Screen/constants/app_colors.dart';
 
-
-
-class LibraryScreen extends StatefulWidget {
-  const LibraryScreen({super.key});
+class DownloadLibraryScreen extends StatefulWidget {
+  const DownloadLibraryScreen({super.key});
 
   @override
-  State<LibraryScreen> createState() => _LibraryScreenState();
+  State<DownloadLibraryScreen> createState() => _DownloadLibraryScreenState();
 }
 
-class _LibraryScreenState extends State<LibraryScreen> {
-  String _selectedFilter = 'All';
+class _DownloadLibraryScreenState extends State<DownloadLibraryScreen> {
+  List<DownloadItem> _downloads = [];
+  bool _isLoading = true;
+  String _filterPlatform = 'All';
+  String _searchQuery = '';
 
-  // Sample downloaded content - in real app, this would come from storage/database
-  final List<Map<String, dynamic>> _downloads = [
-    {
-      'id': '1',
-      'title': 'Amazing Dance Video',
-      'platform': 'YouTube',
-      'thumbnail': '🎬',
-      'size': '12.5 MB',
-      'date': '2024-01-15',
-      'path': '/storage/emulated/0/Download',
-    },
-    {
-      'id': '2',
-      'title': 'Cooking Tutorial',
-      'platform': 'Instagram',
-      'thumbnail': '👨‍🍳',
-      'size': '8.3 MB',
-      'date': '2024-01-14',
-      'path': '/storage/emulated/0/Download',
-    },
-    {
-      'id': '3',
-      'title': 'Travel Vlog',
-      'platform': 'TikTok',
-      'thumbnail': '✈️',
-      'size': '45.2 MB',
-      'date': '2024-01-13',
-      'path': '/storage/emulated/0/Download',
-    },
-    {
-      'id': '4',
-      'title': 'Music Video',
-      'platform': 'YouTube',
-      'thumbnail': '🎵',
-      'size': '32.1 MB',
-      'date': '2024-01-12',
-      'path': '/storage/emulated/0/Download',
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadDownloads();
+  }
 
-  List<Map<String, dynamic>> get _filteredDownloads {
-    if (_selectedFilter == 'All') {
-      return _downloads;
+  Future<void> _loadDownloads() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final history = prefs.getStringList('download_history') ?? [];
+
+      setState(() {
+        _downloads = history.map((item) {
+          try {
+            final data = jsonDecode(item);
+            return DownloadItem.fromJson(data);
+          } catch (e) {
+            return null;
+          }
+        }).whereType<DownloadItem>().toList();
+
+        // Sort by newest first
+        _downloads.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
     }
-    return _downloads.where((item) => item['platform'] == _selectedFilter).toList();
+  }
+
+  Future<void> _deleteDownload(DownloadItem item) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Download'),
+        content: Text('Delete "${item.title}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      // Delete file
+      try {
+        final file = File(item.filePath);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      } catch (e) {
+        // File might not exist
+      }
+
+      // Remove from list
+      final prefs = await SharedPreferences.getInstance();
+      final history = prefs.getStringList('download_history') ?? [];
+      final updated = history.where((h) {
+        try {
+          final data = jsonDecode(h);
+          return data['id'] != item.id;
+        } catch (e) {
+          return true;
+        }
+      }).toList();
+      await prefs.setStringList('download_history', updated);
+
+      await _loadDownloads();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Download deleted')),
+        );
+      }
+    }
+  }
+
+  List<DownloadItem> get _filteredDownloads {
+    var filtered = _downloads;
+
+    if (_filterPlatform != 'All') {
+      filtered = filtered.where((d) => d.platform == _filterPlatform).toList();
+    }
+
+    if (_searchQuery.isNotEmpty) {
+      filtered = filtered.where((d) =>
+          d.title.toLowerCase().contains(_searchQuery.toLowerCase())
+      ).toList();
+    }
+
+    return filtered;
+  }
+
+  String _formatSize(int bytes) {
+    if (bytes == 0) return 'Unknown size';
+    const suffixes = ['B', 'KB', 'MB', 'GB'];
+    var i = 0;
+    var size = bytes.toDouble();
+    while (size >= 1024 && i < suffixes.length - 1) {
+      size /= 1024;
+      i++;
+    }
+    return '${size.toStringAsFixed(1)} ${suffixes[i]}';
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+
+    if (diff.inDays > 7) {
+      return '${date.day}/${date.month}/${date.year}';
+    } else if (diff.inDays > 0) {
+      return '${diff.inDays} day${diff.inDays > 1 ? 's' : ''} ago';
+    } else if (diff.inHours > 0) {
+      return '${diff.inHours} hour${diff.inHours > 1 ? 's' : ''} ago';
+    } else if (diff.inMinutes > 0) {
+      return '${diff.inMinutes} minute${diff.inMinutes > 1 ? 's' : ''} ago';
+    } else {
+      return 'Just now';
+    }
+  }
+
+  Color _getPlatformColor(String platform) {
+    switch (platform.toLowerCase()) {
+      case 'youtube': return Colors.red;
+      case 'instagram': return const Color(0xFFE4405F);
+      case 'tiktok': return Colors.black;
+      case 'facebook': return const Color(0xFF1877F2);
+      case 'twitter': return const Color(0xFF1DA1F2);
+      default: return AppColors.primary;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final isGuest = authProvider.isGuest;
+    final totalSize = _downloads.fold<int>(0, (sum, item) => sum + item.size);
+    final totalCount = _downloads.length;
 
     return Scaffold(
-      backgroundColor: AppColors.lightSurface,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [AppColors.accent, AppColors.secondary, AppColors.primary],
-                ),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(30),
-                  bottomRight: Radius.circular(30),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.accent.withOpacity(0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back, color: AppColors.lightSurface),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      const Expanded(
-                        child: Text(
-                          'My Library',
-                          style: TextStyle(
-                            color: AppColors.lightSurface,
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.search, color: AppColors.lightSurface),
-                        onPressed: () {
-                          // TODO: Implement search
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    isGuest ? 'Sign up to access your library' : '${_downloads.length} downloaded items',
-                    style: TextStyle(
-                      color: AppColors.lightSurface.withOpacity(0.9),
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Filter Chips
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _buildFilterChip('All'),
-                    const SizedBox(width: 10),
-                    _buildFilterChip('YouTube'),
-                    const SizedBox(width: 10),
-                    _buildFilterChip('Instagram'),
-                    const SizedBox(width: 10),
-                    _buildFilterChip('TikTok'),
-                    const SizedBox(width: 10),
-                    _buildFilterChip('Facebook'),
-                  ],
-                ),
-              ),
-            ),
-
-            // Downloads List
-            Expanded(
-              child: isGuest
-                  ? Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(40),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Stack(
-                        children: [
-                          Icon(
-                            Icons.video_library_outlined,
-                            size: 100,
-                            color: Colors.grey[300],
-                          ),
-                          Positioned(
-                            right: 0,
-                            top: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: const BoxDecoration(
-                                color: AppColors.primary,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.lock,
-                                size: 24,
-                                color: AppColors.lightSurface,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 30),
-                      Text(
-                        'Library Locked',
-                        style: TextStyle(
-                          fontSize: 24,
-                          color: AppColors.accent,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'This feature requires an account. Sign up to unlock all features and build your video library!',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[600],
-                          height: 1.5,
-                        ),
-                      ),
-                      const SizedBox(height: 30),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const LoginScreen(),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 32,
-                            vertical: 16,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Text(
-                          'Sign Up to Unlock',
-                          style: TextStyle(
-                            color: AppColors.lightSurface,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-                  : _filteredDownloads.isEmpty
-                  ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.video_library_outlined,
-                      size: 80,
-                      color: Colors.grey[300],
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      'No downloads found',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Download content to see it here',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[500],
-                      ),
-                    ),
-                  ],
-                ),
-              )
-                  : ListView.builder(
-                padding: const EdgeInsets.all(20),
-                itemCount: _filteredDownloads.length,
-                itemBuilder: (context, index) {
-                  final item = _filteredDownloads[index];
-                  return _buildDownloadItem(item);
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterChip(String label) {
-    final isSelected = _selectedFilter == label;
-    return FilterChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (selected) {
-        setState(() {
-          _selectedFilter = label;
-        });
-      },
-      selectedColor: AppColors.primary,
-      labelStyle: TextStyle(
-        color: isSelected ? AppColors.lightSurface : AppColors.accent,
-        fontWeight: FontWeight.w600,
-      ),
-      checkmarkColor: AppColors.lightSurface,
-    );
-  }
-
-  Widget _buildDownloadItem(Map<String, dynamic> item) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.lightSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.accent.withOpacity(0.1),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+      appBar: AppBar(
+        title: const Text('Download History'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadDownloads,
+            tooltip: 'Refresh',
           ),
         ],
       ),
-      child: Row(
+      body: Column(
         children: [
-          // Thumbnail
+          // Stats Card
           Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppColors.primary.withOpacity(0.3),
-                  AppColors.primary.withOpacity(0.1),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Center(
-              child: Text(
-                item['thumbnail'] as String,
-                style: const TextStyle(fontSize: 40),
-              ),
+            padding: const EdgeInsets.all(16),
+            color: AppColors.primary.withOpacity(0.1),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildStatCard(
+                  icon: Icons.download_done,
+                  label: 'Downloads',
+                  value: totalCount.toString(),
+                ),
+                Container(height: 40, width: 1, color: Colors.grey[300]),
+                _buildStatCard(
+                  icon: Icons.storage,
+                  label: 'Total Size',
+                  value: _formatSize(totalSize),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 15),
-          // Content Info
-          Expanded(
+
+          // Search & Filter
+          Padding(
+            padding: const EdgeInsets.all(12),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  item['title'] as String,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.accent,
+                TextField(
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value;
+                    });
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Search downloads...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        setState(() {
+                          _searchQuery = '';
+                        });
+                      },
+                    )
+                        : null,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        item['platform'] as String,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      item['size'] as String,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  item['date'] as String,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[500],
+                const SizedBox(height: 8),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildFilterChip('All', 'All'),
+                      _buildFilterChip('YouTube', 'youtube'),
+                      _buildFilterChip('Instagram', 'instagram'),
+                      _buildFilterChip('TikTok', 'tiktok'),
+                      _buildFilterChip('Facebook', 'facebook'),
+                      _buildFilterChip('Twitter', 'twitter'),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-          // Actions
-          PopupMenuButton(
-            icon: const Icon(Icons.more_vert, color: AppColors.accent),
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'play',
-                child: Row(
-                  children: [
-                    Icon(Icons.play_arrow, size: 20),
-                    SizedBox(width: 10),
-                    Text('Play'),
-                  ],
-                ),
+
+          // Downloads List
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _filteredDownloads.isEmpty
+                ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.folder_open, size: 64, color: Colors.grey[400]),
+                  const SizedBox(height: 16),
+                  Text(
+                    _searchQuery.isNotEmpty || _filterPlatform != 'All'
+                        ? 'No matching downloads'
+                        : 'No downloads yet',
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                  const SizedBox(height: 8),
+                  if (_searchQuery.isEmpty && _filterPlatform == 'All')
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      icon: const Icon(Icons.download),
+                      label: const Text('Download Something'),
+                    ),
+                ],
               ),
-              const PopupMenuItem(
-                value: 'share',
-                child: Row(
-                  children: [
-                    Icon(Icons.share, size: 20),
-                    SizedBox(width: 10),
-                    Text('Share'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'delete',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete, size: 20, color: Colors.red),
-                    SizedBox(width: 10),
-                    Text('Delete', style: TextStyle(color: Colors.red)),
-                  ],
-                ),
-              ),
-            ],
-            onSelected: (value) {
-              // Handle menu actions
-            },
+            )
+                : ListView.builder(
+              padding: const EdgeInsets.all(8),
+              itemCount: _filteredDownloads.length,
+              itemBuilder: (context, index) {
+                final download = _filteredDownloads[index];
+                return Dismissible(
+                  key: Key(download.id),
+                  background: Container(
+                    color: Colors.red,
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(right: 20),
+                    child: const Icon(Icons.delete, color: Colors.white),
+                  ),
+                  direction: DismissDirection.endToStart,
+                  onDismissed: (_) => _deleteDownload(download),
+                  child: Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: _getPlatformColor(download.platform),
+                        child: Text(
+                          download.platform[0].toUpperCase(),
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ),
+                      title: Text(
+                        download.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _formatDate(download.timestamp),
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          Text(
+                            '${_formatSize(download.size)} • ${download.platform}',
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                        ],
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.play_circle_outline),
+                        onPressed: () {
+                          // Play video (you can implement video player)
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Video player coming soon')),
+                          );
+                        },
+                      ),
+                      onTap: () {
+                        showModalBottomSheet(
+                          context: context,
+                          builder: (context) => SafeArea(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                ListTile(
+                                  leading: const Icon(Icons.delete),
+                                  title: const Text('Delete'),
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    _deleteDownload(download);
+                                  },
+                                ),
+                                ListTile(
+                                  leading: const Icon(Icons.share),
+                                  title: const Text('Share'),
+                                  onTap: () {
+                                    // Implement share
+                                    Navigator.pop(context);
+                                  },
+                                ),
+                                ListTile(
+                                  leading: const Icon(Icons.info),
+                                  title: const Text('File Info'),
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    _showFileInfo(download);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard({required IconData icon, required String label, required String value}) {
+    return Column(
+      children: [
+        Icon(icon, color: AppColors.primary, size: 28),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        Text(
+          label,
+          style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFilterChip(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: FilterChip(
+        label: Text(label),
+        selected: _filterPlatform == value,
+        onSelected: (selected) {
+          setState(() {
+            _filterPlatform = value;
+          });
+        },
+        selectedColor: AppColors.primary.withOpacity(0.2),
+        checkmarkColor: AppColors.primary,
+      ),
+    );
+  }
+
+  void _showFileInfo(DownloadItem item) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('File Information'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Name: ${item.title}'),
+            const SizedBox(height: 8),
+            Text('Platform: ${item.platform}'),
+            const SizedBox(height: 8),
+            Text('Size: ${_formatSize(item.size)}'),
+            const SizedBox(height: 8),
+            Text('Path: ${item.filePath}'),
+            const SizedBox(height: 8),
+            Text('Downloaded: ${_formatDate(item.timestamp)}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
           ),
         ],
       ),
@@ -446,8 +445,42 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 }
 
+class DownloadItem {
+  final String id;
+  final String platform;
+  final String title;
+  final String filePath;
+  final int size;
+  final DateTime timestamp;
 
+  DownloadItem({
+    required this.id,
+    required this.platform,
+    required this.title,
+    required this.filePath,
+    required this.size,
+    required this.timestamp,
+  });
 
+  factory DownloadItem.fromJson(Map<String, dynamic> json) {
+    return DownloadItem(
+      id: json['id'],
+      platform: json['platform'],
+      title: json['title'],
+      filePath: json['filePath'],
+      size: json['size'] ?? 0,
+      timestamp: DateTime.parse(json['timestamp']),
+    );
+  }
 
-
-
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'platform': platform,
+      'title': title,
+      'filePath': filePath,
+      'size': size,
+      'timestamp': timestamp.toIso8601String(),
+    };
+  }
+}
