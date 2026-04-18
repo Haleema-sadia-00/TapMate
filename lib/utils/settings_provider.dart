@@ -1,17 +1,20 @@
-// lib/providers/settings_provider.dart
 import 'package:flutter/material.dart';
 import '../Screen/models/settings_user_model.dart';
 import '../Screen/services/settings_service.dart';
-
+import '../Screen/services/follow_service.dart';
 
 class SettingsProvider extends ChangeNotifier {
-  // 🔥 IMPORTANT: _settingsService ko public kar diya
+  // Services
   final SettingsService settingsService = SettingsService();
+  final FollowService _followService = FollowService();
 
+  // Data
   UserModel? _userSettings;
   List<Map<String, dynamic>> _followRequests = [];
   List<Map<String, dynamic>> _blockedUsers = [];
   Map<String, double> _storageUsage = {};
+
+  // States
   bool _isLoading = false;
   String? _error;
 
@@ -171,6 +174,7 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> unblockUser(String userId) async {
     try {
       await settingsService.unblockUser(userId);
+      loadBlockedUsers(); // Refresh list
     } catch (e) {
       _error = e.toString();
       notifyListeners();

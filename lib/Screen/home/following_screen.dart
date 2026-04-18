@@ -1,5 +1,6 @@
+// lib/Screen/home/following_screen.dart
+
 import 'package:flutter/material.dart';
-import 'package:tapmate/Screen/home/other_user_profile_screen.dart';
 import 'package:tapmate/Screen/constants/app_colors.dart';
 
 class FollowingScreen extends StatefulWidget {
@@ -17,126 +18,195 @@ class FollowingScreen extends StatefulWidget {
 }
 
 class _FollowingScreenState extends State<FollowingScreen> {
+  String _searchQuery = '';
+
+  List<Map<String, dynamic>> get _filteredFollowing {
+    if (_searchQuery.isEmpty) {
+      return widget.following;
+    }
+    return widget.following.where((user) {
+      final name = user['name']?.toLowerCase() ?? '';
+      final username = user['username']?.toLowerCase() ?? '';
+      final query = _searchQuery.toLowerCase();
+      return name.contains(query) || username.contains(query);
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final filteredList = _filteredFollowing;
+
     return Scaffold(
-      backgroundColor: AppColors.lightSurface,
+      backgroundColor: isDarkMode ? const Color(0xFF121212) : AppColors.lightSurface,
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.lightSurface),
+          icon: Icon(Icons.arrow_back, color: isDarkMode ? Colors.white : AppColors.textMain),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Following',
           style: TextStyle(
-            color: AppColors.lightSurface,
             fontWeight: FontWeight.bold,
+            color: isDarkMode ? Colors.white : AppColors.textMain,
           ),
         ),
-        backgroundColor: AppColors.primary,
+        backgroundColor: Colors.transparent,
         elevation: 0,
+        centerTitle: false,
       ),
-      body: widget.following.isEmpty
-          ? const Center(
-        child: Text('Not following anyone yet'),
-      )
-          : ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: widget.following.length,
-        itemBuilder: (context, index) {
-          final user = widget.following[index];
-          return _buildFollowingItem(user);
-        },
+      body: Column(
+        children: [
+          // Search Bar
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDarkMode ? Colors.grey[800] : Colors.grey[100],
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: TextField(
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value;
+                  });
+                },
+                decoration: InputDecoration(
+                  hintText: 'Search',
+                  hintStyle: TextStyle(
+                    color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
+                  ),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                style: TextStyle(
+                  color: isDarkMode ? Colors.white : AppColors.textMain,
+                ),
+              ),
+            ),
+          ),
+          // Following List
+          Expanded(
+            child: filteredList.isEmpty
+                ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.person_outline,
+                    size: 60,
+                    color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    _searchQuery.isEmpty ? 'Not following anyone yet' : 'No matching users',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            )
+                : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: filteredList.length,
+              itemBuilder: (context, index) {
+                final user = filteredList[index];
+                return _buildUserTile(user, isDarkMode, context);
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildFollowingItem(Map<String, dynamic> user) {
+  Widget _buildUserTile(Map<String, dynamic> user, bool isDarkMode, BuildContext context) {
     return GestureDetector(
       onTap: () => widget.onUserTap(user),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppColors.lightSurface,
-          borderRadius: BorderRadius.circular(15),
+          color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
               color: Colors.grey.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+              blurRadius: 5,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
         child: Row(
           children: [
             CircleAvatar(
-              radius: 30,
+              radius: 25,
               backgroundColor: AppColors.primary.withOpacity(0.2),
-              child: Text(
-                user['avatar']?.toString() ?? '👤',
-                style: const TextStyle(fontSize: 24),
-              ),
+              backgroundImage: user['profile_pic'] != null && user['profile_pic'].toString().isNotEmpty
+                  ? NetworkImage(user['profile_pic'])
+                  : null,
+              child: (user['profile_pic'] == null || user['profile_pic'].toString().isEmpty)
+                  ? Text(
+                _getInitials(user['name'] ?? 'U'),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              )
+                  : null,
             ),
-            const SizedBox(width: 15),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    user['name']?.toString() ?? 'Unknown',
-                    style: const TextStyle(
+                    user['name'] ?? 'User',
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.accent,
+                      color: isDarkMode ? Colors.white : AppColors.textMain,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          user['category']?.toString() ?? 'User',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${user['mutual'] ?? '0'} mutual',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
+                  const SizedBox(height: 2),
+                  Text(
+                    '@${user['username'] ?? 'user'}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                    ),
                   ),
+                  if (user['bio'] != null && user['bio'].toString().isNotEmpty)
+                    Text(
+                      user['bio'],
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
+                      ),
+                    ),
                 ],
               ),
             ),
-            // Remove button if following
-            ElevatedButton(
-              onPressed: () {
-                _showUnfollowDialog(user);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey[300],
-                foregroundColor: AppColors.textMain,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            OutlinedButton(
+              onPressed: () => widget.onUserTap(user),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: AppColors.primary),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(20),
                 ),
               ),
               child: const Text(
-                'Following',
-                style: TextStyle(fontSize: 14),
+                'View',
+                style: TextStyle(color: AppColors.primary),
               ),
             ),
           ],
@@ -145,32 +215,12 @@ class _FollowingScreenState extends State<FollowingScreen> {
     );
   }
 
-  void _showUnfollowDialog(Map<String, dynamic> user) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Unfollow'),
-        content: Text('Are you sure you want to unfollow ${user['name']}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              // In real app, this would unfollow from database
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Unfollowed ${user['name']}')),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
-            child: const Text('Unfollow', style: TextStyle(color: AppColors.lightSurface)),
-          ),
-        ],
-      ),
-    );
+  String _getInitials(String name) {
+    if (name.isEmpty) return 'U';
+    List<String> parts = name.split(' ');
+    if (parts.length > 1) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name[0].toUpperCase();
   }
 }

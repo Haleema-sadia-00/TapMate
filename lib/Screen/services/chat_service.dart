@@ -1,4 +1,6 @@
 // lib/services/chat_service.dart
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -271,34 +273,43 @@ class ChatService {
 
   // SEND TEXT MESSAGE
   Future<void> sendMessage(String chatId, String message) async {
-    User? currentUser = _auth.currentUser;
+    final currentUser = _auth.currentUser;
     if (currentUser == null) throw Exception('No user logged in');
     if (message.trim().isEmpty) return;
 
+    // Check if user is blocked
+    final otherUserId = await getOtherParticipantId(chatId);
+    if (otherUserId != null) {
+      final isBlocked = await isUserBlocked(otherUserId);
+      if (isBlocked) {
+        throw Exception('You have blocked this user');
+      }
+      final isBlocker = await isUserBlocker(otherUserId);
+      if (isBlocker) {
+        throw Exception('This user has blocked you');
+      }
+    }
+
     try {
-      String? otherUserId = await getOtherParticipantId(chatId);
-      if (otherUserId == null) throw Exception('Other user not found');
+      final otherUserIdFinal = await getOtherParticipantId(chatId);
+      if (otherUserIdFinal == null) throw Exception('Other user not found');
 
-      DocumentSnapshot userDoc = await _firestore
-          .collection('users')
-          .doc(otherUserId)
-          .get();
+      final userDoc = await _firestore.collection('users').doc(otherUserIdFinal).get();
+      final userData = userDoc.data() as Map<String, dynamic>? ?? {};
+      final isOtherOnline = userData['isOnline'] as bool? ?? false;
 
-      Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>? ?? {};
-      bool isOtherOnline = userData['isOnline'] as bool? ?? false;
-
-      Map<String, dynamic> messageData = {
+      final messageData = {
         'senderId': currentUser.uid,
         'message': message,
         'timestamp': FieldValue.serverTimestamp(),
         'type': 'text',
         'readBy': [currentUser.uid],
-        'deliveredTo': isOtherOnline ? [otherUserId] : [],
+        'deliveredTo': isOtherOnline ? [otherUserIdFinal] : [],
         'is_deleted': false,
         'is_forwarded': false,
       };
 
-      DocumentReference msgRef = await _firestore
+      final msgRef = await _firestore
           .collection('chats')
           .doc(chatId)
           .collection('messages')
@@ -311,14 +322,13 @@ class ChatService {
       });
 
       if (!isOtherOnline) {
-        _setupDeliveryListener(chatId, msgRef.id, otherUserId);
+        _setupDeliveryListener(chatId, msgRef.id, otherUserIdFinal);
       }
     } catch (e) {
       print('Error sending message: $e');
       rethrow;
     }
   }
-
   // SEND VOICE MESSAGE
   Future<void> sendVoiceMessage(
       String chatId,
@@ -1064,21 +1074,53 @@ class ChatService {
   }
 
   // UPDATE ONLINE STATUS
+// UPDATE ONLINE STATUS - IMPROVED
   Future<void> updateOnlineStatus(bool isOnline) async {
     User? currentUser = _auth.currentUser;
     if (currentUser == null) return;
 
     try {
-      await _firestore.collection('users').doc(currentUser.uid).update({
-        'isOnline': isOnline,
-        'lastSeen': FieldValue.serverTimestamp(),
-      });
-      print('✅ Online status updated: $isOnline');
+      final now = DateTime.now();
+      final userRef = _firestore.collection('users').doc(currentUser.uid);
+
+      if (isOnline) {
+        // User came online
+        await userRef.update({
+          'isOnline': true,
+          'lastSeen': FieldValue.serverTimestamp(),
+        });
+        print('✅ User ${currentUser.uid} is now ONLINE at $now');
+      } else {
+        // User went offline - update lastSeen
+        await userRef.update({
+          'isOnline': false,
+          'lastSeen': FieldValue.serverTimestamp(),
+        });
+        print('✅ User ${currentUser.uid} is now OFFLINE, lastSeen: $now');
+      }
     } catch (e) {
-      print('Error updating online status: $e');
+      print('❌ Error updating online status: $e');
     }
   }
+  // Add this method to chat_service.dart
+  Future<void> updatePresence() async {
+    User? currentUser = _auth.currentUser;
+    if (currentUser == null) return;
 
+    final userRef = _firestore.collection('users').doc(currentUser.uid);
+
+    // Update every 30 seconds when app is active
+    Timer.periodic(const Duration(seconds: 30), (timer) async {
+      if (_auth.currentUser == null) {
+        timer.cancel();
+        return;
+      }
+
+      await userRef.update({
+        'lastSeen': FieldValue.serverTimestamp(),
+      });
+    });
+  }
   // SEND FRIEND REQUEST
   Future<void> sendFriendRequest(String receiverId) async {
     User? currentUser = _auth.currentUser;

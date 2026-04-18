@@ -138,7 +138,7 @@ class PlatformDownloader {
     }
   }
 
-  // 🔥 INSTAGRAM DOWNLOAD (via RapidAPI)
+  // 🔥 INSTAGRAM DOWNLOAD (via RapidAPI) - FIXED
   Future<DownloadResult> _downloadInstagramVideo({
     required String downloadId,
     required String videoUrl,
@@ -162,21 +162,31 @@ class PlatformDownloader {
         },
       ).timeout(const Duration(seconds: 30));
 
+      print('Instagram Response Status: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        print('Instagram Response Data: $data');
+
         String? downloadUrl;
 
-        if (data['video_url'] != null) {
+        // 🔥 FIX: Correct response parsing
+        if (data['data'] != null && data['data']['url'] != null) {
+          downloadUrl = data['data']['url'];
+        }
+        // Fallback for other response formats
+        else if (data['video_url'] != null) {
           downloadUrl = data['video_url'];
-        } else if (data['media'] != null && data['media']['video_url'] != null) {
+        }
+        else if (data['media'] != null && data['media']['video_url'] != null) {
           downloadUrl = data['media']['video_url'];
-        } else if (data['data'] != null && data['data']['video_url'] != null) {
-          downloadUrl = data['data']['video_url'];
-        } else if (data['url'] != null) {
+        }
+        else if (data['url'] != null) {
           downloadUrl = data['url'];
         }
 
         if (downloadUrl != null && downloadUrl.isNotEmpty) {
+          print('Instagram Download URL found: $downloadUrl');
           return await _downloadDirectFromUrl(
             downloadId,
             downloadUrl,
@@ -187,6 +197,8 @@ class PlatformDownloader {
           throw Exception('Could not extract video URL from Instagram response');
         }
       } else {
+        final errorBody = response.body;
+        print('Instagram API Error: ${response.statusCode} - $errorBody');
         throw Exception('Instagram API error: ${response.statusCode}');
       }
 
@@ -196,7 +208,7 @@ class PlatformDownloader {
     }
   }
 
-  // 🔥 TIKTOK DOWNLOAD (via RapidAPI)
+  // 🔥 TIKTOK DOWNLOAD (via RapidAPI) - FIXED
   Future<DownloadResult> _downloadTikTokVideo({
     required String downloadId,
     required String videoUrl,
@@ -220,19 +232,30 @@ class PlatformDownloader {
         },
       ).timeout(const Duration(seconds: 30));
 
+      print('TikTok Response Status: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        print('TikTok Response Data: $data');
+
         String? downloadUrl;
 
+        // Try different response formats
         if (data['video_url'] != null) {
           downloadUrl = data['video_url'];
-        } else if (data['data'] != null && data['data']['video_url'] != null) {
+        }
+        else if (data['data'] != null && data['data']['video_url'] != null) {
           downloadUrl = data['data']['video_url'];
-        } else if (data['play'] != null) {
+        }
+        else if (data['play'] != null) {
           downloadUrl = data['play'];
+        }
+        else if (data['video']['play'] != null) {
+          downloadUrl = data['video']['play'];
         }
 
         if (downloadUrl != null && downloadUrl.isNotEmpty) {
+          print('TikTok Download URL found: $downloadUrl');
           return await _downloadDirectFromUrl(
             downloadId,
             downloadUrl,
@@ -483,7 +506,7 @@ class PlatformDownloader {
     );
   }
 
-  // 🎯 YouTube Download
+  // 🎯 YouTube Download - 🔥 UPDATED to return actual video title
   Future<DownloadResult> _downloadYouTubeVideo({
     required String downloadId,
     required String videoUrl,
@@ -496,6 +519,8 @@ class PlatformDownloader {
 
     try {
       final video = await yt.videos.get(videoUrl);
+      final videoTitle = video.title; // 🔥 Get actual video title
+
       final manifest = await yt.videos.streamsClient.getManifest(video.id);
       final muxedStreams = manifest.muxed.sortByVideoQuality();
 
@@ -564,11 +589,13 @@ class PlatformDownloader {
       _progressController.add(completed);
       onProgress?.call(completed);
 
+      // 🔥 Return result with actual video title
       return DownloadResult(
         success: true,
         message: 'Download completed',
         filePath: finalPath,
         fileSize: completed.totalBytes,
+        videoTitle: videoTitle, // 🔥 Actual title from YouTube
       );
     } catch (e) {
       if (_downloads.containsKey(downloadId)) {
@@ -701,6 +728,35 @@ class PlatformDownloader {
   void dispose() {
     _progressController.close();
   }
+
+  // Add this method in PlatformDownloader class
+  Future<List<String>> getAvailableQualities(String platformId, String videoUrl) async {
+    if (platformId.toLowerCase() == 'youtube') {
+      try {
+        final yt = YoutubeExplode();
+        final video = await yt.videos.get(videoUrl);
+        final manifest = await yt.videos.streamsClient.getManifest(video.id);
+        final muxedStreams = manifest.muxed.sortByVideoQuality();
+
+        final qualities = <String>[];
+        for (final stream in muxedStreams) {
+          final height = int.tryParse(
+            stream.qualityLabel.toLowerCase().replaceAll(RegExp(r'[^0-9]'), ''),
+          ) ?? 0;
+          if (height > 0) {
+            qualities.add('${height}p');
+          }
+        }
+        yt.close();
+        return qualities.reversed.toList(); // Highest first
+      } catch (e) {
+        return ['best', '1080p', '720p', '480p', '360p'];
+      }
+    }
+
+    // For other platforms, return default options
+    return ['best', '1080p', '720p', '480p', '360p'];
+  }
 }
 
 // Models
@@ -745,11 +801,13 @@ class DownloadResult {
   final String message;
   final String? filePath;
   final int? fileSize;
+  final String? videoTitle; // 🔥 NEW: Actual video title from platform
 
   DownloadResult({
     required this.success,
     required this.message,
     this.filePath,
     this.fileSize,
+    this.videoTitle, // 🔥 NEW
   });
 }

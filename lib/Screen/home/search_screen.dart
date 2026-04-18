@@ -1,14 +1,15 @@
-// lib/Screen/home/search_screen.dart (COMPLETE FINAL VERSION)
-
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:tapmate/Screen/home/download_progress_screen.dart';
 import 'package:tapmate/Screen/home/other_user_profile_screen.dart';
 import 'package:tapmate/Screen/home/storage_selection_dialog.dart';
+import 'package:tapmate/Screen/services/platform_downloader.dart';
 import 'package:tapmate/Screen/services/search_service.dart';
 import '../../auth_provider.dart';
 import '../../theme_provider.dart';
 import 'package:tapmate/Screen/constants/app_colors.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SearchDiscoverScreen extends StatefulWidget {
   const SearchDiscoverScreen({super.key});
@@ -20,20 +21,21 @@ class SearchDiscoverScreen extends StatefulWidget {
 class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with AutomaticKeepAliveClientMixin {
   final TextEditingController _searchController = TextEditingController();
   final SearchService _searchService = SearchService();
+  final FocusNode _searchFocusNode = FocusNode();
 
-  String _selectedPlatform = "All";
   bool _isSearching = false;
   bool _showResults = false;
   String _activeTab = 'all'; // 'all', 'users', 'videos'
-
-  final List<String> platforms = ["All", "YouTube", "TikTok", "Instagram", "Facebook", "Twitter"];
+  bool _isDownloading = false;
 
   // Data lists
   List<Map<String, dynamic>> _searchResults = [];
   List<String> _searchHistory = [];
   List<Map<String, dynamic>> _trendingPosts = [];
-  List<Map<String, dynamic>> _categories = [];
   List<String> _trendingSearches = [];
+
+  // Debounce for real-time search
+  Timer? _debounceTimer;
 
   @override
   bool get wantKeepAlive => true;
@@ -42,6 +44,21 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
   void initState() {
     super.initState();
     _loadInitialData();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  void _onSearchChanged() {
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      if (_searchController.text.isNotEmpty) {
+        _performSearch(_searchController.text);
+      } else if (_showResults) {
+        setState(() {
+          _showResults = false;
+          _searchResults.clear();
+        });
+      }
+    });
   }
 
   Future<void> _loadInitialData() async {
@@ -56,19 +73,10 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
       }
 
       _trendingPosts = await _searchService.getTrendingPosts();
-      _categories = await _searchService.getCategories();
       _trendingSearches = await _searchService.getTrendingSearches();
 
     } catch (e) {
       print('Error loading initial data: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading data: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
     } finally {
       if (mounted) {
         setState(() => _isSearching = false);
@@ -102,10 +110,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
       }
 
       if (_activeTab == 'all' || _activeTab == 'videos') {
-        final posts = await _searchService.searchPosts(
-            query,
-            platform: _selectedPlatform != 'All' ? _selectedPlatform : null
-        );
+        final posts = await _searchService.searchPosts(query);
         allResults.addAll(posts);
       }
 
@@ -123,14 +128,6 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
 
     } catch (e) {
       print('Search error: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Search failed: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
     } finally {
       if (mounted) {
         setState(() => _isSearching = false);
@@ -179,6 +176,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
     }
   }
 
+  // 🔥 REAL DOWNLOAD with Storage Selection
   void _downloadContent(Map<String, dynamic> content) {
     showDialog(
       context: context,
@@ -198,20 +196,118 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
     );
   }
 
-  void _startDownload(Map<String, dynamic> content, String? path, String format, String quality, bool isDeviceStorage) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => DownloadProgressScreen(
-          platformName: content['platform'] ?? 'Unknown',
-          contentTitle: '${content['title'] ?? content['caption']} ($format - $quality)',
-          storagePath: path,
-          isDeviceStorage: isDeviceStorage,
-          fromPlatformScreen: false,
-          sourcePlatform: 'search',
+  // 🔥 FIXED: Direct download without DownloadProgressScreen
+  Future<void> _startDownload(Map<String, dynamic> content, String? path, String format, String quality, bool isDeviceStorage) async {
+    if (_isDownloading) return;
+    setState(() => _isDownloading = true);
+
+    final videoUrl = content['video_url'] ?? content['url'];
+    final platform = content['platform'] ?? 'Unknown';
+    final title = content['title'] ?? content['caption'] ?? '${platform} Video';
+
+    if (videoUrl == null || videoUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Video URL not available'), backgroundColor: Colors.red),
+      );
+      setState(() => _isDownloading = false);
+      return;
+    }
+
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text('Starting download for "$title"...'),
+          ],
         ),
       ),
     );
+
+    try {
+      final downloader = PlatformDownloader();
+
+      final result = await downloader.downloadVideo(
+        platformId: platform.toLowerCase(),
+        videoUrl: videoUrl,
+        videoTitle: title,
+        format: format,
+        quality: quality,
+        customPath: path,
+        onProgress: (progress) {
+          print('Download progress: ${(progress.progress * 100).toStringAsFixed(0)}%');
+        },
+      );
+
+      if (mounted) Navigator.pop(context);
+
+      if (result.success) {
+        // Save to download history
+        final prefs = await SharedPreferences.getInstance();
+        final history = prefs.getStringList('download_history') ?? [];
+        final newEntry = jsonEncode({
+          'id': DateTime.now().millisecondsSinceEpoch.toString(),
+          'platform': platform,
+          'title': title,
+          'filePath': result.filePath,
+          'size': result.fileSize ?? 0,
+          'timestamp': DateTime.now().toIso8601String(),
+          'storageType': isDeviceStorage ? 'device' : 'app',
+        });
+        history.add(newEntry);
+        await prefs.setStringList('download_history', history);
+
+        if (mounted) {
+          if (isDeviceStorage) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('✅ Download saved to: ${path ?? "Selected folder"}'),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: Colors.white),
+                    const SizedBox(width: 12),
+                    const Expanded(child: Text('Download complete! View in Library')),
+                    TextButton(
+                      onPressed: () => Navigator.pushNamed(context, '/download_library'),
+                      child: const Text('VIEW', style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                ),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 4),
+              ),
+            );
+          }
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Download failed: ${result.message}'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isDownloading = false);
+    }
   }
 
   void _viewUserProfile(String userId) {
@@ -236,7 +332,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
           : () {
         if (label == 'Home') {
           Navigator.pushReplacementNamed(context, '/home');
-        } else if (label == 'Discover') {
+        } else if (label == 'Search') {
           Navigator.pushReplacementNamed(context, '/search');
         } else if (label == 'Feed') {
           Navigator.pushReplacementNamed(context, '/feed');
@@ -349,7 +445,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
                       Expanded(
                         child: Center(
                           child: Text(
-                            _showResults ? "Search Results" : "Search & Discover",
+                            _showResults ? "Search Results" : "Search",
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               fontSize: 26,
@@ -393,47 +489,6 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
                 ),
               ),
 
-            // Platform Filter
-            if (!_showResults || _activeTab != 'users')
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                height: 60,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: platforms.map((platform) {
-                    bool isSelected = _selectedPlatform == platform;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 10),
-                      child: ChoiceChip(
-                        label: Text(platform),
-                        selected: isSelected,
-                        onSelected: (selected) {
-                          setState(() {
-                            _selectedPlatform = platform;
-                          });
-                          if (_searchController.text.isNotEmpty) {
-                            _performSearch(_searchController.text);
-                          }
-                        },
-                        selectedColor: AppColors.primary,
-                        labelStyle: TextStyle(
-                          color: isSelected ? AppColors.lightSurface : (isDarkMode ? AppColors.lightSurface : AppColors.accent),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        backgroundColor: isDarkMode ? const Color(0xFF2C2C2C) : Colors.grey[100],
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          side: BorderSide(
-                            color: isSelected ? Colors.transparent : Colors.grey.withOpacity(0.3),
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-
             // Body Content
             Expanded(
               child: _showResults
@@ -463,7 +518,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     _buildNavItem(Icons.home_rounded, 'Home', false, context, isGuest, isDarkMode),
-                    _buildNavItem(Icons.explore_rounded, 'Discover', true, context, isGuest, isDarkMode),
+                    _buildNavItem(Icons.search_rounded, 'Search', true, context, isGuest, isDarkMode),
                     _buildNavItem(Icons.feed_rounded, 'Feed', false, context, isGuest, isDarkMode),
                     _buildNavItem(Icons.message_rounded, 'Message', false, context, isGuest, isDarkMode),
                     _buildNavItem(Icons.person_rounded, 'Profile', false, context, isGuest, isDarkMode),
@@ -538,6 +593,8 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
                 Expanded(
                   child: TextField(
                     controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    autofocus: true,
                     decoration: InputDecoration(
                       hintText: "Search users, videos...",
                       hintStyle: TextStyle(
@@ -548,12 +605,11 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
                     style: TextStyle(
                       color: isDarkMode ? AppColors.lightSurface : AppColors.textMain,
                     ),
-                    onSubmitted: (value) => _performSearch(value),
                   ),
                 ),
                 if (_searchController.text.isNotEmpty)
                   IconButton(
-                    icon: Icon(Icons.clear, size: 20, color: AppColors.primary),
+                    icon: Icon(Icons.close, size: 20, color: AppColors.primary),
                     onPressed: _clearSearch,
                   ),
               ],
@@ -561,51 +617,37 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
           ),
         ),
 
-        // Results Count
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                _searchController.text.isNotEmpty
-                    ? '${_searchResults.length} results found'
-                    : '',
-                style: TextStyle(
-                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                  fontSize: 14,
-                ),
-              ),
-              if (_selectedPlatform != "All" && _activeTab != 'users')
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    _selectedPlatform,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 10),
-
-        // Results List - FIXED EMPTY STATE
+        // Results List
         Expanded(
           child: _isSearching
               ? Center(child: CircularProgressIndicator(color: AppColors.primary))
               : _searchResults.isEmpty
               ? Center(
-            child: SingleChildScrollView(
-              child: _buildEmptyState(isDarkMode),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.search_off,
+                  size: 80,
+                  color: isDarkMode ? Colors.grey[600] : Colors.grey[300],
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'No results found',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Try a different search term',
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                ),
+              ],
             ),
           )
               : ListView.builder(
@@ -616,7 +658,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
               if (item['type'] == 'user') {
                 return _buildUserResultCard(item, isGuest, isDarkMode);
               } else {
-                return _buildVideoResultCard(item, isGuest, isDarkMode, index);
+                return _buildVideoResultCard(item, isGuest, isDarkMode);
               }
             },
           ),
@@ -629,7 +671,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -684,100 +726,17 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
             ],
 
             // Trending Videos
-            _buildTrendingSection(isGuest, isDarkMode),
-            const SizedBox(height: 20),
+            if (_trendingPosts.isNotEmpty) ...[
+              _buildTrendingSection(isGuest, isDarkMode),
+              const SizedBox(height: 20),
+            ],
 
             // Trending Searches
-            _buildTrendingSearchesSection(isDarkMode),
-            const SizedBox(height: 20),
-
-            // Browse Categories - NOW CLICKABLE!
-            _buildCategoriesSection(isDarkMode),
-            const SizedBox(height: 40),
+            if (_trendingSearches.isNotEmpty) ...[
+              _buildTrendingSearchesSection(isDarkMode),
+            ],
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(bool isDarkMode) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          Icons.search_off,
-          size: 80,
-          color: isDarkMode ? Colors.grey[600] : Colors.grey[300],
-        ),
-        const SizedBox(height: 20),
-        Text(
-          'No results found',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Text(
-          'Try a different search term',
-          style: TextStyle(
-            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-          ),
-        ),
-        const SizedBox(height: 20),
-      ],
-    );
-  }
-
-  Widget _buildTrendingSection(bool isGuest, bool isDarkMode) {
-    if (_trendingPosts.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF2C2C2C) : AppColors.lightSurface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(isDarkMode ? 0.3 : 0.1),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.trending_up, color: AppColors.primary, size: 22),
-              const SizedBox(width: 8),
-              Text(
-                "Trending Videos",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          SizedBox(
-            height: 280,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: _trendingPosts.length,
-              itemBuilder: (context, index) {
-                return _buildTrendingVideoCard(_trendingPosts[index], isGuest, isDarkMode);
-              },
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -814,9 +773,9 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
                 GestureDetector(
                   onTap: _clearSearchHistory,
                   child: Text(
-                    "Clear",
+                    "Clear All",
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: AppColors.primary,
                     ),
@@ -864,8 +823,8 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
                     child: Text(
                       search,
                       style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
                         color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
                       ),
                       maxLines: 1,
@@ -885,11 +844,54 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
     );
   }
 
-  Widget _buildTrendingSearchesSection(bool isDarkMode) {
-    if (_trendingSearches.isEmpty) {
-      return const SizedBox.shrink();
-    }
+  Widget _buildTrendingSection(bool isGuest, bool isDarkMode) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF2C2C2C) : AppColors.lightSurface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(isDarkMode ? 0.3 : 0.1),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.trending_up, color: AppColors.primary, size: 22),
+              const SizedBox(width: 8),
+              Text(
+                "Trending Videos",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 280,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _trendingPosts.length,
+              itemBuilder: (context, index) {
+                return _buildTrendingVideoCard(_trendingPosts[index], isGuest, isDarkMode);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
+  Widget _buildTrendingSearchesSection(bool isDarkMode) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -933,65 +935,35 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
     );
   }
 
-  // FIXED: Categories Section with CLICKABLE cards
-  Widget _buildCategoriesSection(bool isDarkMode) {
-    if (_categories.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF2C2C2C) : AppColors.lightSurface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(isDarkMode ? 0.3 : 0.1),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+  Widget _buildTrendingChip(String trend, bool isDarkMode) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _searchController.text = trend;
+        });
+        _performSearch(trend);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isDarkMode ? const Color(0xFF1E1E1E) : AppColors.lightSurface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.primary, width: 1),
+        ),
+        child: Text(
+          trend,
+          style: TextStyle(
+            color: AppColors.primary,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Browse Categories",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 120,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: _categories.map((category) {
-                return _CategoryCard(
-                  icon: category['icon'] ?? Icons.category,
-                  title: category['name'] ?? 'Category',
-                  count: category['count'] ?? '0',
-                  isDarkMode: isDarkMode,
-                  onTap: () {
-                    setState(() {
-                      _searchController.text = category['name'] ?? '';
-                      _activeTab = 'videos'; // Switch to videos tab
-                      _showResults = true; // Show results
-                    });
-                    _performSearch(category['name'] ?? '');
-                  },
-                );
-              }).toList(),
-            ),
-          ),
-        ],
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
     );
   }
 
-  // FIXED USER RESULT CARD - NO OVERFLOW
   Widget _buildUserResultCard(Map<String, dynamic> user, bool isGuest, bool isDarkMode) {
     return GestureDetector(
       onTap: () => _viewUserProfile(user['id']),
@@ -1012,7 +984,6 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Profile Picture
             CircleAvatar(
               radius: 28,
               backgroundColor: AppColors.primary.withOpacity(0.2),
@@ -1027,8 +998,6 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
                   : null,
             ),
             const SizedBox(width: 12),
-
-            // User Info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1069,10 +1038,6 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
                 ],
               ),
             ),
-
-            const SizedBox(width: 8),
-
-            // Private indicator
             if (user['isPrivate'] == true)
               Container(
                 padding: const EdgeInsets.all(4),
@@ -1088,7 +1053,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
     );
   }
 
-  Widget _buildVideoResultCard(Map<String, dynamic> video, bool isGuest, bool isDarkMode, int index) {
+  Widget _buildVideoResultCard(Map<String, dynamic> video, bool isGuest, bool isDarkMode) {
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
       decoration: BoxDecoration(
@@ -1109,71 +1074,26 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
           Stack(
             children: [
               Container(
-                height: 160,
+                height: 180,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.primary.withOpacity(0.3),
-                      AppColors.primary.withOpacity(0.1),
-                    ],
-                  ),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(16),
                     topRight: Radius.circular(16),
                   ),
-                ),
-                child: Image.network(
-                  video['thumbnailUrl'] ?? video['thumbnail_url'] ?? 'https://picsum.photos/400/400',
-                  fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Center(
-                      child: CircularProgressIndicator(color: AppColors.primary),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.videocam, size: 30, color: AppColors.primary),
-                          const SizedBox(height: 5),
-                          Text(
-                            'Video Preview',
-                            style: TextStyle(fontSize: 12, color: AppColors.primary),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-              if (video['duration'] != null)
-                Positioned(
-                  bottom: 8,
-                  right: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.textMain.withOpacity(0.7),
-                      borderRadius: BorderRadius.circular(4),
+                  image: DecorationImage(
+                    image: NetworkImage(
+                      video['thumbnailUrl'] ?? video['thumbnail_url'] ?? 'https://picsum.photos/400/400',
                     ),
-                    child: Text(
-                      video['duration'],
-                      style: const TextStyle(
-                        color: AppColors.lightSurface,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    fit: BoxFit.cover,
                   ),
                 ),
+              ),
               Positioned(
                 top: 8,
                 left: 8,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: _getPlatformColor(video['platform'] ?? 'YouTube'),
                     borderRadius: BorderRadius.circular(6),
@@ -1182,7 +1102,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
                     video['platform'] ?? 'Unknown',
                     style: const TextStyle(
                       color: AppColors.lightSurface,
-                      fontSize: 9,
+                      fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -1204,16 +1124,16 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
                     fontWeight: FontWeight.bold,
                     color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
                   ),
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 GestureDetector(
                   onTap: () => _viewUserProfile(video['userId']),
                   child: Row(
                     children: [
                       CircleAvatar(
-                        radius: 12,
+                        radius: 14,
                         backgroundColor: AppColors.primary.withOpacity(0.2),
                         backgroundImage: video['user_profile_pic'] != null && video['user_profile_pic'].toString().isNotEmpty
                             ? NetworkImage(video['user_profile_pic'])
@@ -1221,16 +1141,16 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
                         child: video['user_profile_pic'] == null || video['user_profile_pic'].toString().isEmpty
                             ? Text(
                           video['user_name']?.toString().substring(0, 1).toUpperCase() ?? '?',
-                          style: const TextStyle(fontSize: 10, color: AppColors.primary),
+                          style: const TextStyle(fontSize: 12, color: AppColors.primary),
                         )
                             : null,
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           video['user_name'] ?? 'Unknown',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 13,
                             color: AppColors.primary,
                             fontWeight: FontWeight.w600,
                           ),
@@ -1241,31 +1161,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
                     ],
                   ),
                 ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Icon(Icons.favorite, size: 12, color: Colors.red),
-                    const SizedBox(width: 2),
-                    Text(
-                      video['likes']?.toString() ?? '0',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Icon(Icons.comment, size: 12, color: Colors.blue),
-                    const SizedBox(width: 2),
-                    Text(
-                      video['comments']?.toString() ?? '0',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
 
                 // Download Button
                 if (video['canDownload'] == true && !isGuest)
@@ -1273,17 +1169,17 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () => _downloadContent(video),
-                      icon: const Icon(Icons.download_rounded, size: 16),
+                      icon: const Icon(Icons.download_rounded, size: 18),
                       label: const Text(
                         "Download",
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: AppColors.lightSurface,
-                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                       ),
                     ),
@@ -1298,9 +1194,7 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
 
   Widget _buildTrendingVideoCard(Map<String, dynamic> video, bool isGuest, bool isDarkMode) {
     return GestureDetector(
-      onTap: () {
-        // Navigate to video detail
-      },
+      onTap: () {},
       child: Container(
         width: 180,
         margin: const EdgeInsets.only(right: 12),
@@ -1318,95 +1212,47 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Thumbnail
             Container(
-              height: 100,
+              height: 120,
               width: double.infinity,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.primary.withOpacity(0.3),
-                    AppColors.primary.withOpacity(0.1),
-                  ],
-                ),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(12),
                   topRight: Radius.circular(12),
                 ),
-              ),
-              child: Image.network(
-                video['thumbnailUrl'] ?? video['thumbnail_url'] ?? 'https://picsum.photos/300/200',
-                fit: BoxFit.cover,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  );
-                },
-                errorBuilder: (context, error, stackTrace) {
-                  return Center(
-                    child: Icon(Icons.videocam, size: 30, color: AppColors.primary),
-                  );
-                },
+                image: DecorationImage(
+                  image: NetworkImage(
+                    video['thumbnailUrl'] ?? video['thumbnail_url'] ?? 'https://picsum.photos/300/200',
+                  ),
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
-
-            // Video Info
             Padding(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     video['caption'] ?? video['title'] ?? 'Untitled',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: FontWeight.bold,
                       color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '@${video['user_name'] ?? 'Unknown'}',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: AppColors.primary,
-                    ),
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.favorite, size: 10, color: Colors.red),
-                          const SizedBox(width: 2),
-                          Text(
-                            video['likes']?.toString() ?? '0',
-                            style: TextStyle(
-                              fontSize: 9,
-                              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          "Trending",
-                          style: TextStyle(
-                            fontSize: 8,
-                            color: Colors.orange[800],
-                            fontWeight: FontWeight.bold,
-                          ),
+                      const Icon(Icons.favorite, size: 10, color: Colors.red),
+                      const SizedBox(width: 2),
+                      Text(
+                        video['likes']?.toString() ?? '0',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                         ),
                       ),
                     ],
@@ -1416,63 +1262,6 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildTrendingChip(String trend, bool isDarkMode) {
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _searchController.text = trend;
-        });
-        _performSearch(trend);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: isDarkMode ? const Color(0xFF1E1E1E) : AppColors.lightSurface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.primary, width: 1),
-        ),
-        child: Text(
-          trend,
-          style: TextStyle(
-            color: AppColors.primary,
-            fontSize: 12,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
-    );
-  }
-
-  void _showGuestDownloadDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Sign In Required'),
-        content: const Text('Please sign in to download videos. Guest users can only browse content.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/login');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-            ),
-            child: const Text(
-              'Sign In',
-              style: TextStyle(color: AppColors.lightSurface),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1518,73 +1307,5 @@ class _SearchDiscoverScreenState extends State<SearchDiscoverScreen> with Automa
       default:
         return AppColors.primary;
     }
-  }
-}
-
-// FIXED: Category Card with onTap
-class _CategoryCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String count;
-  final bool isDarkMode;
-  final VoidCallback? onTap;
-
-  const _CategoryCard({
-    required this.icon,
-    required this.title,
-    required this.count,
-    required this.isDarkMode,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 100,
-        margin: const EdgeInsets.only(right: 12),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isDarkMode ? const Color(0xFF1E1E1E) : AppColors.lightSurface,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(isDarkMode ? 0.3 : 0.1),
-              blurRadius: 4,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 24, color: AppColors.primary),
-            const SizedBox(height: 6),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: isDarkMode ? AppColors.lightSurface : AppColors.accent,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              "$count videos",
-              style: TextStyle(
-                fontSize: 9,
-                color: AppColors.primary,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

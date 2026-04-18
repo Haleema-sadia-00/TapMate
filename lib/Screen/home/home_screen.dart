@@ -71,8 +71,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
       downloads.sort((a, b) => b['timestamp'].compareTo(a['timestamp']));
 
+      // ✅ Calculate total storage
+      int totalBytes = 0;
+      for (var download in downloads) {
+        final size = download['size'];
+        if (size is int) {
+          totalBytes += size;
+        } else if (size is double) {
+          totalBytes += size.toInt();
+        } else if (size is num) {
+          totalBytes += size.toInt();
+        }
+      }
+
       setState(() {
         _recentDownloads = downloads.take(3).toList();
+        _downloadsCount = history.length;
+        _storageUsed = _formatSize(totalBytes);
       });
     } catch (e) {
       print('Error loading recent downloads: $e');
@@ -81,7 +96,6 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     }
   }
-
   Future<void> _loadUserData() async {
     try {
       User? currentUser = _auth.currentUser;
@@ -91,23 +105,74 @@ class _HomeScreenState extends State<HomeScreen> {
             .doc(currentUser.uid)
             .get();
 
+        // ✅ Load downloads from SharedPreferences for real data
+        final prefs = await SharedPreferences.getInstance();
+        final history = prefs.getStringList('download_history') ?? [];
+
+        // Calculate total downloads count
+        int totalDownloads = history.length;
+
+        // Calculate total storage used (sum of all file sizes)
+        int totalBytes = 0;
+        for (var item in history) {
+          try {
+            final data = jsonDecode(item);
+            // ✅ FIX: Convert num to int safely
+            final size = data['size'];
+            if (size is int) {
+              totalBytes += size;
+            } else if (size is double) {
+              totalBytes += size.toInt();
+            } else if (size is num) {
+              totalBytes += size.toInt();
+            }
+          } catch (e) {
+            // Skip invalid entries
+          }
+        }
+
+        // Format storage used
+        String storageUsed = _formatSize(totalBytes);
+
+        // Get cloud uploads count (from Firestore or SharedPreferences)
+        int cloudUploads = 0;
         if (userDoc.exists) {
           Map<String, dynamic> data = userDoc.data() as Map<String, dynamic>? ?? {};
-          setState(() {
-            _userData = data;
-            _downloadsCount = data['downloads_count'] ?? 0;
-            _storageUsed = data['storage_used'] ?? '0 GB';
-            _cloudUploads = data['cloud_uploads'] ?? 0;
-          });
+          cloudUploads = data['cloud_uploads'] ?? 0;
+
+          // Also save to SharedPreferences for consistency
+          await prefs.setInt('cloud_uploads', cloudUploads);
+        } else {
+          cloudUploads = prefs.getInt('cloud_uploads') ?? 0;
         }
+
+        setState(() {
+          _userData = userDoc.exists ? (userDoc.data() as Map<String, dynamic>? ?? {}) : {};
+          _downloadsCount = totalDownloads;
+          _storageUsed = storageUsed;
+          _cloudUploads = cloudUploads;
+        });
+
+        print('✅ Dashboard Stats - Downloads: $totalDownloads, Storage: $storageUsed, Cloud: $cloudUploads');
+      } else {
+        // Guest mode - show zeros
+        setState(() {
+          _downloadsCount = 0;
+          _storageUsed = '0 GB';
+          _cloudUploads = 0;
+        });
       }
     } catch (e) {
       print('Error loading user data: $e');
+      setState(() {
+        _downloadsCount = 0;
+        _storageUsed = '0 GB';
+        _cloudUploads = 0;
+      });
     } finally {
       setState(() => _isLoading = false);
     }
   }
-
   Future<void> _checkAndShowTutorial() async {
     final authProvider = Provider.of<myAuth.AuthProvider>(context, listen: false);
 
@@ -284,9 +349,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final isDarkMode = themeProvider.isDarkMode;
     final screenSize = MediaQuery.of(context).size;
 
-    // Initialize button position to bottom-right
+    // Initialize button position to bottom-right (moved up)
     if (_buttonPosition == Offset(0, 0)) {
-      _buttonPosition = Offset(screenSize.width - 80, screenSize.height - 80);
+      _buttonPosition = Offset(screenSize.width - 80, screenSize.height - 120);
     }
 
     if (_isLoading) {
@@ -519,7 +584,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
 
-                        // Quick Actions Section
+                        // Quick Actions Section - Library
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20),
                           child: Column(
@@ -538,14 +603,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                 children: [
                                   Expanded(
                                     child: _buildEqualQuickAction(
-                                      icon: Icons.history_rounded,
-                                      label: 'Download History',
+                                      icon: Icons.video_library_rounded,
+                                      label: 'Library',
                                       subtitle: 'View all your downloads',
                                       color: AppColors.primary,
                                       isLocked: isGuest,
                                       onTap: () {
                                         if (isGuest) {
-                                          showLockedFeatureDialog(context, 'Download History', isDarkMode);
+                                          showLockedFeatureDialog(context, 'Library', isDarkMode);
                                         } else {
                                           Navigator.pushNamed(context, '/download_library');
                                         }
@@ -573,7 +638,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         const SizedBox(height: 45),
 
-                        // Recent Downloads Section - REAL DATA ONLY
+                        // Recent Downloads Section
                         Container(
                           margin: const EdgeInsets.symmetric(horizontal: 20),
                           padding: const EdgeInsets.all(20),
@@ -642,7 +707,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
 
-                // Bottom Navigation Bar
+                // 🔥 Bottom Navigation Bar - Changed Discover to Search
                 Container(
                   height: 70,
                   decoration: BoxDecoration(
@@ -659,7 +724,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       _buildNavItem(Icons.home_rounded, 'Home', true, context, isGuest, isDarkMode),
-                      _buildNavItem(Icons.explore_rounded, 'Discover', false, context, isGuest, isDarkMode),
+                      _buildNavItem(Icons.search_rounded, 'Search', false, context, isGuest, isDarkMode), // 🔥 Changed
                       _buildNavItem(Icons.feed_rounded, 'Feed', false, context, isGuest, isDarkMode),
                       _buildNavItem(Icons.message_rounded, 'Message', false, context, isGuest, isDarkMode),
                       _buildNavItem(Icons.person_rounded, 'Profile', false, context, isGuest, isDarkMode),
@@ -670,7 +735,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          // 🔥 CUSTOM DRAGGABLE FLOATING BUTTON
+          // Draggable Floating Button
           Positioned(
             left: _buttonPosition.dx,
             top: _buttonPosition.dy,
@@ -685,11 +750,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   double newX = _buttonPosition.dx + details.delta.dx;
                   double newY = _buttonPosition.dy + details.delta.dy;
 
-                  // Keep within screen bounds
                   newX = newX.clamp(0.0, screenSize.width - 70);
                   newY = newY.clamp(
-                      kToolbarHeight + 20,
-                      screenSize.height - 100
+                    kToolbarHeight + 20,
+                    screenSize.height - 100,
                   );
 
                   _buttonPosition = Offset(newX, newY);
@@ -702,16 +766,20 @@ class _HomeScreenState extends State<HomeScreen> {
               },
               child: Container(
                 decoration: BoxDecoration(
-                  boxShadow: _isDragging ? [
+                  boxShadow: _isDragging
+                      ? [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.3),
                       blurRadius: 10,
                       spreadRadius: 2,
                     ),
-                  ] : null,
+                  ]
+                      : null,
                 ),
                 child: FloatingActionButton(
-                  onPressed: _isDragging ? null : () {
+                  onPressed: _isDragging
+                      ? null
+                      : () {
                     if (isGuest) {
                       showLockedFeatureDialog(context, 'Download', isDarkMode);
                     } else {
@@ -842,7 +910,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text(
                   value,
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: isLocked ? Colors.grey : color,
                   ),
@@ -886,7 +954,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 150,
+        height: 130,
         decoration: BoxDecoration(
           color: isLocked ? Colors.grey[50] : color.withOpacity(0.05),
           borderRadius: BorderRadius.circular(16),
@@ -1082,7 +1150,7 @@ class _HomeScreenState extends State<HomeScreen> {
           : () {
         if (label == 'Home') {
           Navigator.pushReplacementNamed(context, '/home');
-        } else if (label == 'Discover') {
+        } else if (label == 'Search') {
           Navigator.pushReplacementNamed(context, '/search');
         } else if (label == 'Feed') {
           Navigator.pushReplacementNamed(context, '/feed');

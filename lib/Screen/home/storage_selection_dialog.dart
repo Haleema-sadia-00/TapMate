@@ -1,9 +1,6 @@
-// lib/Screen/home/storage_selection_dialog.dart
-
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
-import 'format_selection_dialog.dart';
 import 'dart:io';
 import 'package:tapmate/Screen/constants/app_colors.dart';
 
@@ -22,6 +19,7 @@ class StorageSelectionDialog extends StatefulWidget {
     required this.onDeviceStorageSelected,
     required this.onAppStorageSelected,
   });
+
   @override
   State<StorageSelectionDialog> createState() => _StorageSelectionDialogState();
 }
@@ -56,98 +54,37 @@ class _StorageSelectionDialogState extends State<StorageSelectionDialog> with Si
 
     setState(() => _isSelectingPath = true);
 
-    // Show format selection first
-    final result = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (context) => FormatSelectionDialog(
-        contentTitle: widget.contentTitle,
-      ),
-    );
-
-    if (result != null && mounted) {
-      final format = result['format']?.toString() ?? 'mp4';
-      final quality = result['quality']?.toString() ?? '1080p';
-
-      await _selectPathAfterFormat(format, quality);
-    } else {
-      if (mounted) setState(() => _isSelectingPath = false);
-    }
-  }
-
-  Future<void> _selectPathAfterFormat(String format, String quality) async {
     try {
-      // Let user select directory
       String? selectedDirectory = await FilePicker.platform.getDirectoryPath(
         dialogTitle: 'Select download location',
       );
 
+      // ✅ Close dialog FIRST, then call callback
+      if (mounted) {
+        Navigator.pop(context);
+      }
+
       if (selectedDirectory != null && mounted) {
-        Navigator.pop(context); // Close storage dialog
-        widget.onDeviceStorageSelected(selectedDirectory, format, quality);
-      } else {
-        // User cancelled - use default
-        if (mounted) {
-          setState(() => _isSelectingPath = false);
-
-          // Ask if they want to use default
-          final useDefault = await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Use Default Location?'),
-              content: Text(
-                'No folder selected. Use default download folder?\n\n'
-                    '${_getDefaultPath()}',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Use Default'),
-                ),
-              ],
-            ),
-          ) ?? false;
-
-          if (useDefault) {
-            Navigator.pop(context);
-            widget.onDeviceStorageSelected(_getDefaultPath(), format, quality);
-          }
-        }
+        widget.onDeviceStorageSelected(selectedDirectory, 'mp4', 'best');
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isSelectingPath = false);
+        Navigator.pop(context);
         _showErrorDialog('Error selecting path: ${e.toString()}');
       }
-    }
-  }
-
-  String _getDefaultPath() {
-    if (Platform.isAndroid) {
-      return '/storage/emulated/0/Download/TapMate/${widget.platformName.toLowerCase()}';
-    } else {
-      return 'TapMate Downloads/${widget.platformName}';
+    } finally {
+      if (mounted) {
+        setState(() => _isSelectingPath = false);
+      }
     }
   }
 
   void _handleAppStorage() async {
-    final result = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (context) => FormatSelectionDialog(
-        contentTitle: widget.contentTitle,
-      ),
-    );
-
-    if (result != null && mounted) {
-      final format = result['format']?.toString() ?? 'mp4';
-      final quality = result['quality']?.toString() ?? '1080p';
-
-      Navigator.pop(context); // Close storage dialog
-      widget.onAppStorageSelected(format, quality);
+    // ✅ Close dialog FIRST, then call callback
+    if (mounted) {
+      Navigator.pop(context);
     }
+    widget.onAppStorageSelected('mp4', 'best');
   }
 
   void _showErrorDialog(String message) {
@@ -184,7 +121,6 @@ class _StorageSelectionDialogState extends State<StorageSelectionDialog> with Si
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Header
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -218,29 +154,26 @@ class _StorageSelectionDialogState extends State<StorageSelectionDialog> with Si
               ),
               const SizedBox(height: 24),
 
-              // Device Storage
               _buildStorageOption(
                 icon: Icons.phone_android,
                 title: 'Device Storage',
-                subtitle: 'Save to SD card or internal storage',
+                subtitle: 'Select a folder on your device',
                 color: AppColors.primary,
                 onTap: _isSelectingPath ? null : _selectDevicePath,
                 isLoading: _isSelectingPath,
               ),
               const SizedBox(height: 12),
 
-              // App Storage
               _buildStorageOption(
                 icon: Icons.folder,
                 title: 'App Storage',
-                subtitle: 'Save to TapMate downloads folder',
+                subtitle: 'Save to TapMate Library\n(Visible only inside app)',
                 color: AppColors.secondary,
                 onTap: _handleAppStorage,
                 isLoading: false,
               ),
               const SizedBox(height: 20),
 
-              // Cancel Button
               SizedBox(
                 width: double.infinity,
                 child: TextButton(

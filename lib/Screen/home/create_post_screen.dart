@@ -1,5 +1,3 @@
-// lib/Screen/home/create_post_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -24,6 +22,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   Future<void> _pickMedia() async {
     showModalBottomSheet(
       context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) => Container(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -32,6 +33,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             ListTile(
               leading: const Icon(Icons.photo_library, color: AppColors.primary),
               title: const Text('Choose from Gallery'),
+              subtitle: const Text('Select an image'),
               onTap: () async {
                 Navigator.pop(context);
                 final XFile? image = await _picker.pickImage(
@@ -48,6 +50,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             ListTile(
               leading: const Icon(Icons.video_library, color: AppColors.primary),
               title: const Text('Choose Video'),
+              subtitle: const Text('Select a video'),
               onTap: () async {
                 Navigator.pop(context);
                 final XFile? video = await _picker.pickVideo(
@@ -64,6 +67,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             ListTile(
               leading: const Icon(Icons.camera_alt, color: AppColors.primary),
               title: const Text('Take Photo'),
+              subtitle: const Text('Capture with camera'),
               onTap: () async {
                 Navigator.pop(context);
                 final XFile? photo = await _picker.pickImage(
@@ -99,10 +103,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     return await snapshot.ref.getDownloadURL();
   }
 
-// lib/Screen/home/create_post_screen.dart mein _sharePost method
-
-  // lib/Screen/home/create_post_screen.dart mein _sharePost method
-
   Future<void> _sharePost() async {
     if (_selectedMedia == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -117,7 +117,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception('Not logged in');
 
-      // Get user data
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -129,7 +128,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
       final userData = userDoc.data() as Map<String, dynamic>;
 
-      // 🔥 UPLOAD TO CLOUDINARY
+      // Upload to Cloudinary
       print('📤 Uploading media to Cloudinary...');
       final mediaUrl = await MediaService().uploadMedia(
         file: _selectedMedia!,
@@ -142,13 +141,14 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         'userId': user.uid,
         'userName': userData['name'] ?? user.displayName ?? 'User',
         'userProfilePic': userData['profile_pic'] ?? '',
-        'caption': _captionController.text.trim(),
+        'caption': _captionController.text.trim(),  // ✅ Caption saved here
         'thumbnailUrl': mediaUrl,
         'videoUrl': _isVideo ? mediaUrl : null,
         'createdAt': FieldValue.serverTimestamp(),
         'likes': 0,
         'comments': 0,
         'isVideo': _isVideo,
+        'platform': 'TapMate',
       });
 
       // Update user's post count

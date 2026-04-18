@@ -39,6 +39,7 @@ dependencies:
   share_plus: ^7.2.0
   open_filex: ^4.3.2
   agora_rtc_engine: ^6.3.0
+  video_thumbnail: ^0.5.3
 
   # Other Packages
   cupertino_icons: ^1.0.8

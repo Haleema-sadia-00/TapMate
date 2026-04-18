@@ -30,9 +30,7 @@ class _LivePlatformBrowserScreenState extends State<LivePlatformBrowserScreen> {
   String? _lastRouteLoadKey;
   final TextEditingController _tiktokLinkController = TextEditingController();
   final TextEditingController _instagramLinkController =
-      TextEditingController();
-  DateTime _now = DateTime.now();
-  Timer? _clockTimer;
+  TextEditingController();
 
   @override
   void initState() {
@@ -41,7 +39,7 @@ class _LivePlatformBrowserScreenState extends State<LivePlatformBrowserScreen> {
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setUserAgent(
         'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 '
-        '(KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36',
+            '(KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36',
       )
       ..setNavigationDelegate(
         NavigationDelegate(
@@ -83,11 +81,9 @@ class _LivePlatformBrowserScreenState extends State<LivePlatformBrowserScreen> {
             }
 
             if (_isInstagramPlatform && url.startsWith('market://')) {
-              // Keep Instagram flow in WebView and ignore Play Store jumps.
               return NavigationDecision.prevent;
             }
 
-            // Handle deep-links that fail inside WebView by opening externally.
             if (url.startsWith('intent://') ||
                 url.startsWith('fb://') ||
                 url.startsWith('twitter://') ||
@@ -122,13 +118,6 @@ class _LivePlatformBrowserScreenState extends State<LivePlatformBrowserScreen> {
         );
       }
     }
-
-    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() {
-        _now = DateTime.now();
-      });
-    });
   }
 
   @override
@@ -177,7 +166,12 @@ class _LivePlatformBrowserScreenState extends State<LivePlatformBrowserScreen> {
 
   @override
   void dispose() {
-    _clockTimer?.cancel();
+    _controller.runJavaScript('''
+      var videos = document.querySelectorAll('video');
+      for(var i = 0; i < videos.length; i++) {
+        videos[i].pause();
+      }
+    ''');
     _tiktokLinkController.dispose();
     _instagramLinkController.dispose();
     super.dispose();
@@ -230,7 +224,6 @@ class _LivePlatformBrowserScreenState extends State<LivePlatformBrowserScreen> {
       }
     }
 
-    // Convert common Android intent format into a web URL fallback.
     final hostAndPath = intentUrl
         .replaceFirst(RegExp(r'^intent://', caseSensitive: false), '')
         .split('#')
@@ -255,25 +248,25 @@ class _LivePlatformBrowserScreenState extends State<LivePlatformBrowserScreen> {
     }
     if (platform == 'youtube') {
       return _initialUrl.contains('youtube.com') ||
-              _initialUrl.contains('youtu.be')
+          _initialUrl.contains('youtu.be')
           ? _initialUrl
           : 'https://m.youtube.com';
     }
     if (platform == 'instagram') {
       return _initialUrl.contains('instagram.com') ||
-              _initialUrl.contains('i.instagram.com')
+          _initialUrl.contains('i.instagram.com')
           ? _initialUrl
           : _defaultInstagramStartUrl;
     }
     if (platform == 'facebook') {
       return _initialUrl.contains('facebook.com') ||
-              _initialUrl.contains('fb.watch')
+          _initialUrl.contains('fb.watch')
           ? _initialUrl
           : 'https://m.facebook.com/watch/';
     }
     if (platform == 'twitter') {
       return _initialUrl.contains('x.com') ||
-              _initialUrl.contains('twitter.com')
+          _initialUrl.contains('twitter.com')
           ? _initialUrl
           : 'https://x.com/explore';
     }
@@ -314,10 +307,16 @@ class _LivePlatformBrowserScreenState extends State<LivePlatformBrowserScreen> {
   }
 
   Future<void> _captureAndDownload() async {
+    await _controller.runJavaScript('''
+      var videos = document.querySelectorAll('video');
+      for(var i = 0; i < videos.length; i++) {
+        videos[i].pause();
+      }
+    ''');
+
     final capturedUrl = (await _controller.currentUrl()) ?? _currentUrl;
     var candidate = capturedUrl.trim();
 
-    // TikTok often fails to expose a stable current URL in WebView; use manual fallback.
     if (_isTikTokPlatform &&
         (candidate.isEmpty || !_isLikelyVideoUrl(candidate))) {
       candidate = _tiktokLinkController.text.trim();
@@ -400,7 +399,6 @@ class _LivePlatformBrowserScreenState extends State<LivePlatformBrowserScreen> {
     final uri = Uri.tryParse(url);
     if (uri == null) return url;
 
-    // Strip known tracking params that can break backend extractors.
     final filtered = Map<String, String>.from(uri.queryParameters)
       ..remove('igshid')
       ..remove('utm_source')
@@ -427,15 +425,15 @@ class _LivePlatformBrowserScreenState extends State<LivePlatformBrowserScreen> {
         'window.localStorage.clear(); window.sessionStorage.clear();',
       );
     } catch (_) {
-      // Best effort only. If storage cannot be cleared, cookie clear still helps.
+      // Best effort only
     }
     await _controller.loadRequest(Uri.parse(_defaultInstagramStartUrl));
   }
 
   Future<void> _launchUriSafely(
-    Uri? uri, {
-    required bool allowFallbackToWeb,
-  }) async {
+      Uri? uri, {
+        required bool allowFallbackToWeb,
+      }) async {
     if (uri == null) {
       _showLaunchError('Invalid link');
       return;
@@ -510,22 +508,23 @@ class _LivePlatformBrowserScreenState extends State<LivePlatformBrowserScreen> {
     );
   }
 
-  String _clockText(DateTime now) {
-    final h = now.hour.toString().padLeft(2, '0');
-    final m = now.minute.toString().padLeft(2, '0');
-    final s = now.second.toString().padLeft(2, '0');
-    return '$h:$m:$s';
-  }
-
   @override
   Widget build(BuildContext context) {
     final shownUrl = _currentUrl.isNotEmpty ? _currentUrl : _initialUrl;
 
     return Scaffold(
+      // 🔥 APP BAR WITH HIDDEN TITLE (only back button and actions)
       appBar: AppBar(
-        title: Text('$_platformName Live'),
+        // 🔥 NO TITLE - hide kiya
+        title: null,
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        // Optional: Add back button if needed
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+          tooltip: 'Go back',
+        ),
         actions: [
           if (_isInstagramPlatform)
             IconButton(
@@ -543,6 +542,7 @@ class _LivePlatformBrowserScreenState extends State<LivePlatformBrowserScreen> {
       body: Stack(
         children: [
           WebViewWidget(controller: _controller),
+
           if (_platformName.toLowerCase() == 'tiktok')
             Positioned(
               left: 12,
@@ -567,6 +567,7 @@ class _LivePlatformBrowserScreenState extends State<LivePlatformBrowserScreen> {
                 ),
               ),
             ),
+
           if (_hasLoadError)
             Positioned.fill(
               child: Container(
@@ -641,39 +642,10 @@ class _LivePlatformBrowserScreenState extends State<LivePlatformBrowserScreen> {
                 ),
               ),
             ),
+
+          // Download button
           Positioned(
-            left: 12,
-            right: 12,
-            top: _platformName.toLowerCase() == 'tiktok' ? 80 : 12,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.55),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Current Time: ${_clockText(_now)}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    shownUrl,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 20,
+            bottom: 60,
             right: 16,
             child: FloatingActionButton.extended(
               onPressed: _captureAndDownload,
@@ -683,55 +655,6 @@ class _LivePlatformBrowserScreenState extends State<LivePlatformBrowserScreen> {
               label: const Text('Download'),
             ),
           ),
-          if (_isManualLinkFallbackPlatform)
-            Positioned(
-              left: 12,
-              right: 12,
-              bottom: 88,
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.94),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.12),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _isTikTokPlatform
-                            ? _tiktokLinkController
-                            : _instagramLinkController,
-                        minLines: 1,
-                        maxLines: 1,
-                        decoration: InputDecoration(
-                          isDense: true,
-                          hintText: _isTikTokPlatform
-                              ? 'Paste TikTok link if current page is blocked'
-                              : 'Paste Instagram public reel/post link',
-                          border: const OutlineInputBorder(),
-                          prefixIcon: const Icon(Icons.link, size: 18),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      onPressed: _isTikTokPlatform
-                          ? _pasteTikTokLinkFromClipboard
-                          : _pasteInstagramLinkFromClipboard,
-                      tooltip: 'Paste',
-                      icon: const Icon(Icons.content_paste),
-                    ),
-                  ],
-                ),
-              ),
-            ),
         ],
       ),
     );

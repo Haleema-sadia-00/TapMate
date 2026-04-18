@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 
@@ -37,14 +38,16 @@ class AudioPlayerService {
     });
   }
 
-  // Play voice from File - FIXED
+  // ✅ FIXED: Play voice with speaker on
   Future<void> playVoice(File audioFile) async {
     try {
       await stop();
-      currentUrlNotifier.value = audioFile.path;
 
-      // ✅ FIXED: Use audioFile.path (String) instead of audioFile (File)
-      await _audioPlayer.play(DeviceFileSource(audioFile.path));
+      // ✅ Force speaker on
+      await _audioPlayer.setSource(DeviceFileSource(audioFile.path));
+      await _audioPlayer.setVolume(1.0);  // Max volume
+      await _audioPlayer.setPlayerMode(PlayerMode.mediaPlayer);  // Use media player mode
+      await _audioPlayer.resume();
 
       debugPrint('▶️ Playing: ${audioFile.path}');
     } catch (e) {
@@ -53,25 +56,14 @@ class AudioPlayerService {
     }
   }
 
-  // Alternative method if you want to play from path directly
-  Future<void> playVoiceFromPath(String filePath) async {
+  // Alternative: Play from URL directly (without downloading)
+  Future<void> playVoiceFromUrl(String url) async {
     try {
       await stop();
-      currentUrlNotifier.value = filePath;
-      await _audioPlayer.play(DeviceFileSource(filePath));
-      debugPrint('▶️ Playing: $filePath');
-    } catch (e) {
-      debugPrint('❌ Error playing audio: $e');
-      rethrow;
-    }
-  }
-
-  // Play from URL
-  Future<void> playFromUrl(String url) async {
-    try {
-      await stop();
-      currentUrlNotifier.value = url;
-      await _audioPlayer.play(UrlSource(url));
+      await _audioPlayer.setSource(UrlSource(url));
+      await _audioPlayer.setVolume(1.0);
+      await _audioPlayer.setPlayerMode(PlayerMode.mediaPlayer);
+      await _audioPlayer.resume();
       debugPrint('▶️ Playing from URL: $url');
     } catch (e) {
       debugPrint('❌ Error playing from URL: $e');

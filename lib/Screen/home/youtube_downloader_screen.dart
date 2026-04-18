@@ -5,9 +5,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tapmate/Screen/constants/app_colors.dart';
-import 'package:tapmate/Screen/home/storage_selection_dialog.dart';
 import 'package:tapmate/Screen/services/platform_downloader.dart';
 import 'package:tapmate/Screen/home/library_screen.dart';
+import 'storage_selection_dialog.dart';
+import '../models/download_item.dart';  // 🔥 Import DownloadItem model
 
 class YouTubeDownloaderScreen extends StatefulWidget {
   const YouTubeDownloaderScreen({super.key});
@@ -66,11 +67,6 @@ class _YouTubeDownloaderScreenState extends State<YouTubeDownloaderScreen>
       }
 
       final autoDownload = args['autoDownload'] == true;
-      final capturedAtRaw = args['capturedAt']?.toString();
-      if (capturedAtRaw != null && capturedAtRaw.isNotEmpty) {
-        _status = 'Captured at $capturedAtRaw. Ready to download';
-      }
-
       if (autoDownload && !_autoDownloadQueued && initialUrl.isNotEmpty) {
         _autoDownloadQueued = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -113,10 +109,7 @@ class _YouTubeDownloaderScreenState extends State<YouTubeDownloaderScreen>
       final directory = await getApplicationDocumentsDirectory();
       final stats = await directory.stat();
 
-      final totalSpace = Platform.isAndroid
-          ? await _getTotalStorageSpace()
-          : 64 * 1024 * 1024 * 1024;
-
+      final totalSpace = Platform.isAndroid ? 128 * 1024 * 1024 * 1024 : 64 * 1024 * 1024 * 1024;
       final freeSpace = stats.size;
       final freeGB = (freeSpace / (1024 * 1024 * 1024)).toStringAsFixed(1);
       final totalGB = (totalSpace / (1024 * 1024 * 1024)).toStringAsFixed(1);
@@ -131,18 +124,7 @@ class _YouTubeDownloaderScreenState extends State<YouTubeDownloaderScreen>
     }
   }
 
-  Future<int> _getTotalStorageSpace() async {
-    try {
-      final directory = await getExternalStorageDirectory();
-      if (directory != null) {
-        return 128 * 1024 * 1024 * 1024;
-      }
-    } catch (e) {
-      // Ignore
-    }
-    return 64 * 1024 * 1024 * 1024;
-  }
-
+  // 🔥 Only storage selection dialog
   Future<void> _downloadVideo() async {
     final url = _linkController.text.trim();
 
@@ -158,34 +140,23 @@ class _YouTubeDownloaderScreenState extends State<YouTubeDownloaderScreen>
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => StorageSelectionDialog(
         platformName: _platformName,
         contentId: 'manual_${DateTime.now().millisecondsSinceEpoch}',
         contentTitle: '${_platformName} Video',
         onDeviceStorageSelected: (path, format, quality) {
-          _startDownload(
-            customPath: path,
-            format: format,
-            quality: quality,
-          );
+          _startDownload(url, customPath: path);
         },
         onAppStorageSelected: (format, quality) {
-          _startDownload(
-            format: format,
-            quality: quality,
-          );
+          _startDownload(url, customPath: null);
         },
       ),
     );
   }
 
-  Future<void> _startDownload({
-    String? customPath,
-    required String format,
-    required String quality,
-  }) async {
-    final url = _linkController.text.trim();
-
+  // 🔥 Start download with best quality and save storage type
+  void _startDownload(String url, {String? customPath}) async {
     setState(() {
       _isDownloading = true;
       _progress = 0;
@@ -195,8 +166,8 @@ class _YouTubeDownloaderScreenState extends State<YouTubeDownloaderScreen>
       _downloadedBytes = 0;
       _totalBytes = 0;
       _status = customPath != null
-          ? '📁 Downloading to selected folder...'
-          : '📁 Downloading...';
+          ? '📁 Downloading to selected folder with best quality...'
+          : '📁 Downloading to App Storage with best quality...';
     });
 
     final downloader = PlatformDownloader();
@@ -206,15 +177,14 @@ class _YouTubeDownloaderScreenState extends State<YouTubeDownloaderScreen>
     final result = await downloader.downloadVideo(
       platformId: platformId,
       videoUrl: url,
-      videoTitle: '${platformId}_video_${DateTime.now().millisecondsSinceEpoch}',
-      format: format,
-      quality: quality,
+      videoTitle: '${_platformName}_video_${DateTime.now().millisecondsSinceEpoch}',
+      format: 'mp4',
+      quality: 'best',
       customPath: customPath,
       onProgress: (progress) {
         if (!mounted) return;
 
-        final now = DateTime.now();
-        final elapsed = now.difference(startTime).inSeconds;
+        final elapsed = DateTime.now().difference(startTime).inSeconds;
         final downloadedMB = progress.downloadedBytes / (1024 * 1024);
         final speed = elapsed == 0 ? 0 : downloadedMB / elapsed;
 
@@ -258,55 +228,97 @@ class _YouTubeDownloaderScreenState extends State<YouTubeDownloaderScreen>
         _status = '✅ Download complete!';
         _progress = 1.0;
 
+        final storageType = customPath != null ? 'device' : 'app';
+
         _saveToDownloadHistory(
           platform: _platformName,
-          title: '${_platformName} Video',
+          title: result.videoTitle ?? '${_platformName} Video',
           filePath: result.filePath!,
           size: _downloadedBytes,
+          storageType: storageType,
         );
       } else {
         _status = '❌ ${result.message}';
       }
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(result.success ? Icons.check_circle : Icons.error,
-                color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(result.success
-                  ? 'Download complete! View in Library'
-                  : result.message),
+    if (result.success) {
+      final storageType = customPath != null ? 'device' : 'app';
+
+      if (storageType == 'app') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 12),
+                const Expanded(child: Text('Download complete! View in Library')),
+                TextButton(
+                  onPressed: () => Navigator.pushNamed(context, '/download_library'),
+                  child: const Text('VIEW', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ],
             ),
-            if (result.success)
-              TextButton(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/download_library');
-                },
-                child: const Text('VIEW', style: TextStyle(color: Colors.white)),
-              ),
-          ],
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      } else {
+        final fileName = result.filePath!.split('/').last;
+        final folderPath = customPath ?? 'Selected folder';
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('✅ Download complete!', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text('📁 $folderPath', style: TextStyle(fontSize: 12)),
+                Text('📹 $fileName', style: TextStyle(fontSize: 11, color: Colors.white70)),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'OK',
+              textColor: Colors.white,
+              onPressed: () {},
+            ),
+          ),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(child: Text(result.message)),
+            ],
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
         ),
-        backgroundColor: result.success ? Colors.green : Colors.red,
-        duration: const Duration(seconds: 3),
-      ),
-    );
+      );
+    }
 
     _getStorageInfo();
   }
-
+  // 🔥 UPDATED: Save with storage type
   Future<void> _saveToDownloadHistory({
     required String platform,
     required String title,
     required String filePath,
     required int size,
+    required String storageType, // 🔥 NEW parameter
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final history = prefs.getStringList('download_history') ?? [];
+
       final newEntry = jsonEncode({
         'id': DateTime.now().millisecondsSinceEpoch.toString(),
         'platform': platform,
@@ -314,9 +326,12 @@ class _YouTubeDownloaderScreenState extends State<YouTubeDownloaderScreen>
         'filePath': filePath,
         'size': size,
         'timestamp': DateTime.now().toIso8601String(),
+        'storageType': storageType, // 🔥 Save storage type
       });
+
       history.add(newEntry);
       await prefs.setStringList('download_history', history);
+      print('✅ Saved: $title (${storageType} storage)');
     } catch (e) {
       print('Error saving to history: $e');
     }
@@ -353,7 +368,6 @@ class _YouTubeDownloaderScreenState extends State<YouTubeDownloaderScreen>
     return 'youtube';
   }
 
-  // 🔥 FIXED: Using TapMate consistent colors
   Color _getTapMateColor() {
     return AppColors.primary;
   }
@@ -392,9 +406,7 @@ class _YouTubeDownloaderScreenState extends State<YouTubeDownloaderScreen>
         actions: [
           IconButton(
             icon: const Icon(Icons.folder_open),
-            onPressed: () {
-              Navigator.pushNamed(context, '/download_library');
-            },
+            onPressed: () => Navigator.pushNamed(context, '/download_library'),
             tooltip: 'Download Library',
           ),
         ],
@@ -541,10 +553,7 @@ class _YouTubeDownloaderScreenState extends State<YouTubeDownloaderScreen>
                       children: [
                         Text(
                           '${(_progress * 100).toStringAsFixed(0)}%',
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                         ),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
@@ -587,9 +596,7 @@ class _YouTubeDownloaderScreenState extends State<YouTubeDownloaderScreen>
                                 content: Text('Saved at: $_savedFilePath'),
                                 action: SnackBarAction(
                                   label: 'VIEW',
-                                  onPressed: () {
-                                    Navigator.pushNamed(context, '/download_library');
-                                  },
+                                  onPressed: () => Navigator.pushNamed(context, '/download_library'),
                                 ),
                               ),
                             );
@@ -629,13 +636,7 @@ class _YouTubeDownloaderScreenState extends State<YouTubeDownloaderScreen>
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        _platformName.toLowerCase() == 'facebook'
-                            ? 'Facebook videos must be public.'
-                            : _platformName.toLowerCase() == 'instagram'
-                            ? 'Make sure the account is public'
-                            : _platformName.toLowerCase() == 'tiktok'
-                            ? 'Paste the share link from TikTok app'
-                            : 'Paste the full video URL to start downloading',
+                        'Paste your video link, choose storage location, and download with best quality!',
                         style: TextStyle(fontSize: 12, color: Colors.amber[800]),
                       ),
                     ),

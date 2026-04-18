@@ -1,16 +1,14 @@
-// lib/Screen/home/feed_screen.dart (COMPLETE PROFESSIONAL UI VERSION)
-
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
+import 'package:share_plus/share_plus.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:tapmate/Screen/Auth/LoginScreen.dart';
 import 'package:tapmate/Screen/home/comments_screen.dart';
-import 'package:tapmate/Screen/home/download_progress_screen.dart';
 import 'package:tapmate/Screen/home/other_user_profile_screen.dart';
-import 'package:tapmate/Screen/home/storage_selection_dialog.dart';
-import 'package:tapmate/Screen/services/media_service.dart';
 import '../../auth_provider.dart';
 import '../../theme_provider.dart';
 import 'package:tapmate/Screen/constants/app_colors.dart';
@@ -25,7 +23,6 @@ class FeedScreen extends StatefulWidget {
 class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateMixin {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final MediaService _mediaService = MediaService();
 
   List<Map<String, dynamic>> _feedItems = [];
   bool _isLoading = false;
@@ -90,14 +87,13 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
           'user_username': userData['username'] ?? '',
           'caption': postData['caption'] ?? '',
           'thumbnail_url': postData['thumbnailUrl'] ?? '',
-          'video_url': postData['videoUrl'],
+          'video_url': postData['videoUrl'] ?? '',
           'platform': postData['platform'] ?? 'TapMate',
           'created_at': postData['createdAt'],
           'likes_count': postData['likes'] ?? 0,
           'comments_count': postData['comments'] ?? 0,
           'is_video': postData['isVideo'] ?? false,
           'is_liked': isLiked,
-          'can_download': true,
         });
       }
 
@@ -118,7 +114,6 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
     String postId = _feedItems[index]['id'];
     bool isLiked = _feedItems[index]['is_liked'] ?? false;
 
-    // Animate like
     if (!isLiked) {
       _animationController.forward(from: 0);
       Future.delayed(const Duration(milliseconds: 300), () {
@@ -182,92 +177,31 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
     );
   }
 
-  void _sharePost(Map<String, dynamic> post) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Share Post',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.accent),
-            ),
-            const SizedBox(height: 20),
-            ListTile(
-              leading: const Icon(Icons.share, color: Colors.blue, size: 28),
-              title: const Text('Share via...', style: TextStyle(fontSize: 16)),
-              onTap: () {
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.link, color: Colors.green, size: 28),
-              title: const Text('Copy Link', style: TextStyle(fontSize: 16)),
-              onTap: () {
-                Navigator.pop(context);
-                _copyPostLink(post['id']);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.download, color: AppColors.primary, size: 28),
-              title: const Text('Download Video', style: TextStyle(fontSize: 16)),
-              onTap: () {
-                Navigator.pop(context);
-                _downloadContent(post);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
+  // ✅ WORKING SHARE FUNCTION
+  Future<void> _sharePost(Map<String, dynamic> post) async {
+    final shareText = '''
+Check out this post on TapMate! 📱
+
+${post['caption'] ?? 'Check out this amazing content'}
+
+Posted by: ${post['user_name']}
+Likes: ${post['likes_count']}
+Comments: ${post['comments_count']}
+
+Download TapMate to see more! 🚀
+''';
+
+    await Share.share(shareText);
   }
 
   void _copyPostLink(String postId) {
+    final postLink = 'tapmate://post/$postId';
+    Clipboard.setData(ClipboardData(text: postLink));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Link copied: post_$postId'),
+        content: Text('Post link copied!'),
         backgroundColor: Colors.green,
         duration: const Duration(seconds: 1),
-      ),
-    );
-  }
-
-  void _downloadContent(Map<String, dynamic> content) {
-    showDialog(
-      context: context,
-      builder: (context) => StorageSelectionDialog(
-        platformName: content['platform'],
-        contentId: content['id'],
-        contentTitle: content['caption'],
-        onDeviceStorageSelected: (path, format, quality) {
-          Navigator.pop(context);
-          _startDownload(content, path, format, quality, true);
-        },
-        onAppStorageSelected: (format, quality) {
-          Navigator.pop(context);
-          _startDownload(content, null, format, quality, false);
-        },
-      ),
-    );
-  }
-
-  void _startDownload(Map<String, dynamic> content, String? path, String format, String quality, bool isDeviceStorage) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => DownloadProgressScreen(
-          platformName: content['platform'],
-          contentTitle: '${content['caption']} ($format - $quality)',
-          storagePath: path,
-          isDeviceStorage: isDeviceStorage,
-          fromPlatformScreen: false,
-          sourcePlatform: 'feed',
-        ),
       ),
     );
   }
@@ -285,36 +219,97 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Share Option
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.share, color: Colors.blue, size: 20),
+              ),
+              title: const Text('Share Post'),
+              onTap: () {
+                Navigator.pop(context);
+                _sharePost(post);
+              },
+            ),
+            // Copy Link Option
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.link, color: Colors.green, size: 20),
+              ),
+              title: const Text('Copy Link'),
+              onTap: () {
+                Navigator.pop(context);
+                _copyPostLink(post['id']);
+              },
+            ),
             if (isMyPost) ...[
+              const Divider(),
               ListTile(
-                leading: Icon(Icons.delete, color: Colors.red, size: 28),
-                title: Text('Delete Post', style: TextStyle(fontSize: 16, color: Colors.red)),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.delete, color: Colors.red, size: 20),
+                ),
+                title: const Text('Delete Post', style: TextStyle(color: Colors.red)),
                 onTap: () {
                   Navigator.pop(context);
                   _deletePost(post);
                 },
               ),
             ] else ...[
+              const Divider(),
               ListTile(
-                leading: Icon(Icons.person_add, color: AppColors.primary, size: 28),
-                title: Text('Follow User', style: TextStyle(fontSize: 16)),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.person_add, color: AppColors.primary, size: 20),
+                ),
+                title: const Text('Follow User'),
                 onTap: () {
                   Navigator.pop(context);
                   _followUser(post['user_id']);
                 },
               ),
               ListTile(
-                leading: Icon(Icons.block, color: Colors.red, size: 28),
-                title: Text('Block User', style: TextStyle(fontSize: 16, color: Colors.red)),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.block, color: Colors.red, size: 20),
+                ),
+                title: const Text('Block User', style: TextStyle(color: Colors.red)),
                 onTap: () {
                   Navigator.pop(context);
                   _blockUser(post);
                 },
               ),
-              const Divider(),
               ListTile(
-                leading: Icon(Icons.flag, color: Colors.orange, size: 28),
-                title: Text('Report Post', style: TextStyle(fontSize: 16, color: Colors.orange)),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.flag, color: Colors.orange, size: 20),
+                ),
+                title: const Text('Report Post', style: TextStyle(color: Colors.orange)),
                 onTap: () {
                   Navigator.pop(context);
                   _reportPost(post);
@@ -446,7 +441,7 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
           ? () => _showGuestFeatureDialog(label)
           : () {
         if (label == 'Home') Navigator.pushReplacementNamed(context, '/home');
-        else if (label == 'Discover') Navigator.pushReplacementNamed(context, '/search');
+        else if (label == 'Search') Navigator.pushReplacementNamed(context, '/search');
         else if (label == 'Feed') Navigator.pushReplacementNamed(context, '/feed');
         else if (label == 'Message') Navigator.pushReplacementNamed(context, '/chat');
         else if (label == 'Profile') Navigator.pushReplacementNamed(context, '/profile');
@@ -480,7 +475,7 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
           Text(
             label,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 11,
               color: isActive ? AppColors.primary : (isDarkMode ? Colors.grey[600] : Colors.grey),
               fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
             ),
@@ -535,7 +530,6 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
         content: const Text(
           'You are browsing in guest mode. Sign up to:\n\n'
               '• Like and comment on posts\n'
-              '• Download videos\n'
               '• Share posts\n'
               '• Follow users\n'
               '• Create your own posts',
@@ -555,49 +549,6 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
     );
   }
 
-  void _showSignUpPrompt() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.person_add, size: 60, color: AppColors.primary),
-            const SizedBox(height: 20),
-            const Text('Join TapMate Community', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.accent)),
-            const SizedBox(height: 10),
-            const Text('Sign up to unlock all features and start interacting!', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
-            const SizedBox(height: 30),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.symmetric(vertical: 16)),
-                child: const Text('Sign Up Free', style: TextStyle(color: AppColors.lightSurface, fontSize: 16)),
-              ),
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () => Navigator.pop(context),
-                style: OutlinedButton.styleFrom(side: const BorderSide(color: AppColors.primary), padding: const EdgeInsets.symmetric(vertical: 16)),
-                child: Text('Continue as Guest', style: TextStyle(color: AppColors.primary)),
-              ),
-            ),
-            SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
@@ -605,15 +556,19 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
     final isGuest = authProvider.isGuest;
     final isDarkMode = themeProvider.isDarkMode;
 
+    if (isGuest) {
+      return _buildGuestView(isDarkMode);
+    }
+
     return Scaffold(
       backgroundColor: isDarkMode ? const Color(0xFF121212) : AppColors.lightSurface,
       body: SafeArea(
         child: Column(
           children: [
-            // Modern Header
+            // Header
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
@@ -624,38 +579,41 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
                 boxShadow: [BoxShadow(color: AppColors.accent.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10))],
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isGuest ? 'Community Feed' : 'Your Feed',
-                        style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        isGuest ? 'Sign up to interact' : 'Discover content from your network',
-                        style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14),
-                      ),
-                    ],
+                  IconButton(
+                    icon: Icon(isGuest ? Icons.info_outline : Icons.search, color: Colors.white, size: 22),
+                    onPressed: () {
+                      if (isGuest) _showGuestInfo();
+                      else Navigator.pushNamed(context, '/search');
+                    },
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
-                  Row(
-                    children: [
-                      if (!isGuest)
-                        IconButton(
-                          icon: const Icon(Icons.add_circle_outline, color: Colors.white, size: 28),
-                          onPressed: () => Navigator.pushNamed(context, '/create-post'),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isGuest ? 'Community Feed' : 'Your Feed',
+                          style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                         ),
-                      IconButton(
-                        icon: Icon(isGuest ? Icons.info_outline : Icons.search, color: Colors.white, size: 28),
-                        onPressed: () {
-                          if (isGuest) _showGuestInfo();
-                          else Navigator.pushNamed(context, '/search');
-                        },
-                      ),
-                    ],
+                        const SizedBox(height: 2),
+                        Text(
+                          isGuest ? 'Sign up to interact' : 'Discover content from your network',
+                          style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 11),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
+                  if (!isGuest)
+                    IconButton(
+                      icon: const Icon(Icons.add_circle_outline, color: Colors.white, size: 22),
+                      onPressed: () => Navigator.pushNamed(context, '/create-post'),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
                 ],
               ),
             ),
@@ -681,7 +639,7 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
                   ),
                 )
                     : ListView.builder(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(12),
                   itemCount: _feedItems.length,
                   itemBuilder: (context, index) => _buildFeedItem(_feedItems[index], index, isGuest, isDarkMode),
                 ),
@@ -692,7 +650,7 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
             SafeArea(
               top: false,
               child: Container(
-                height: 70,
+                height: 65,
                 decoration: BoxDecoration(
                   color: isDarkMode ? const Color(0xFF1E1E1E) : AppColors.lightSurface,
                   boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, -2))],
@@ -701,7 +659,7 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     _buildNavItem(Icons.home_rounded, 'Home', false, context, isGuest, isDarkMode),
-                    _buildNavItem(Icons.explore_rounded, 'Discover', false, context, isGuest, isDarkMode),
+                    _buildNavItem(Icons.search, 'Search', false, context, isGuest, isDarkMode),
                     _buildNavItem(Icons.feed_rounded, 'Feed', true, context, isGuest, isDarkMode),
                     _buildNavItem(Icons.message_rounded, 'Message', false, context, isGuest, isDarkMode),
                     _buildNavItem(Icons.person_rounded, 'Profile', false, context, isGuest, isDarkMode),
@@ -715,45 +673,92 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
     );
   }
 
-  // Professional Feed Item Card
+  Widget _buildGuestView(bool isDarkMode) {
+    return Scaffold(
+      backgroundColor: isDarkMode ? const Color(0xFF121212) : AppColors.lightSurface,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.lock_outline, size: 80, color: AppColors.primary),
+                const SizedBox(height: 20),
+                Text(
+                  'Sign In Required',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? Colors.white : AppColors.accent,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Please sign in to see your feed.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: isDarkMode ? Colors.grey[400]! : Colors.grey[600]!,
+                  ),
+                ),
+                const SizedBox(height: 30),
+                ElevatedButton(
+                  onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
+                  ),
+                  child: const Text(
+                    'Go to Home',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildFeedItem(Map<String, dynamic> item, int index, bool isGuest, bool isDarkMode) {
     final isLiked = item['is_liked'] ?? false;
     final timestamp = item['created_at'] as Timestamp?;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 20),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: isDarkMode ? Colors.black.withOpacity(0.3) : Colors.grey.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // User Header
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             child: Row(
               children: [
                 GestureDetector(
                   onTap: () => _viewUserProfile(item['user_id']),
                   child: CircleAvatar(
-                    radius: 24,
+                    radius: 20,
                     backgroundImage: item['user_profile_pic'] != null && item['user_profile_pic'].toString().isNotEmpty
                         ? NetworkImage(item['user_profile_pic'])
                         : null,
                     child: (item['user_profile_pic'] == null || item['user_profile_pic'].toString().isEmpty)
-                        ? Text(item['user_name'][0].toUpperCase(), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))
+                        ? Text(item['user_name'][0].toUpperCase(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold))
                         : null,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -763,30 +768,32 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
                         child: Text(
                           item['user_name'],
                           style: TextStyle(
-                            fontSize: 15,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
                             color: isDarkMode ? Colors.white : AppColors.accent,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: _getPlatformColor(item['platform']).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
                               item['platform'],
-                              style: TextStyle(fontSize: 10, color: _getPlatformColor(item['platform']), fontWeight: FontWeight.w600),
+                              style: TextStyle(fontSize: 9, color: _getPlatformColor(item['platform']), fontWeight: FontWeight.w600),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Text(
                             timestamp != null ? timeago.format(timestamp.toDate()) : 'Recently',
-                            style: TextStyle(fontSize: 11, color: isDarkMode ? Colors.grey[500] : Colors.grey[500]),
+                            style: TextStyle(fontSize: 10, color: isDarkMode ? Colors.grey[500] : Colors.grey[500]),
                           ),
                         ],
                       ),
@@ -794,28 +801,28 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.more_horiz, color: isDarkMode ? Colors.grey[400] : AppColors.accent),
+                  icon: Icon(Icons.more_horiz, color: isDarkMode ? Colors.grey[400] : AppColors.accent, size: 20),
                   onPressed: () => _showPostOptions(item),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
               ],
             ),
           ),
 
-          // Caption
           if (item['caption'].toString().isNotEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Text(
                 item['caption'],
-                style: TextStyle(fontSize: 14, color: isDarkMode ? Colors.grey[300] : AppColors.textMain, height: 1.4),
-                maxLines: 3,
+                style: TextStyle(fontSize: 13, color: isDarkMode ? Colors.grey[300] : AppColors.textMain, height: 1.4),
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
-          // Media Preview
           GestureDetector(
             onTap: () {
               Navigator.push(
@@ -830,7 +837,7 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
               );
             },
             child: Container(
-              height: 280,
+              height: 240,
               width: double.infinity,
               decoration: BoxDecoration(
                 color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
@@ -852,9 +859,9 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.video_library, size: 40, color: AppColors.primary),
-                            const SizedBox(height: 8),
-                            Text('Preview not available', style: TextStyle(color: AppColors.primary, fontSize: 12)),
+                            Icon(Icons.video_library, size: 30, color: AppColors.primary),
+                            const SizedBox(height: 6),
+                            Text('Preview not available', style: TextStyle(color: AppColors.primary, fontSize: 11)),
                           ],
                         ),
                       ),
@@ -862,9 +869,9 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
                     if (item['is_video'] == true)
                       Center(
                         child: Container(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(color: Colors.black.withOpacity(0.5), shape: BoxShape.circle),
-                          child: const Icon(Icons.play_arrow, color: Colors.white, size: 32),
+                          child: const Icon(Icons.play_arrow, color: Colors.white, size: 28),
                         ),
                       ),
                   ],
@@ -873,32 +880,31 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
-          // Stats Row
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(
               children: [
                 ScaleTransition(
                   scale: Tween<double>(begin: 0.8, end: 1.2).animate(CurvedAnimation(parent: _animationController, curve: Curves.elasticOut)),
-                  child: Icon(Icons.favorite, size: 18, color: isLiked ? Colors.red : Colors.grey[500]),
+                  child: Icon(Icons.favorite, size: 16, color: isLiked ? Colors.red : Colors.grey[500]),
                 ),
-                const SizedBox(width: 6),
-                Text(_formatNumber(item['likes_count']), style: TextStyle(fontSize: 13, color: isLiked ? Colors.red : Colors.grey[500])),
-                const SizedBox(width: 20),
-                Icon(Icons.chat_bubble_outline, size: 18, color: Colors.grey[500]),
-                const SizedBox(width: 6),
-                Text(_formatNumber(item['comments_count']), style: TextStyle(fontSize: 13, color: Colors.grey[500])),
+                const SizedBox(width: 4),
+                Text(_formatNumber(item['likes_count']), style: TextStyle(fontSize: 12, color: isLiked ? Colors.red : Colors.grey[500])),
+                const SizedBox(width: 16),
+                Icon(Icons.chat_bubble_outline, size: 16, color: Colors.grey[500]),
+                const SizedBox(width: 4),
+                Text(_formatNumber(item['comments_count']), style: TextStyle(fontSize: 12, color: Colors.grey[500])),
               ],
             ),
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
-          // Action Buttons
+          // ✅ Action Buttons - NO DOWNLOAD (Simple & Clean)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
             child: Row(
               children: [
                 _buildActionButton(
@@ -930,18 +936,11 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
                   color: AppColors.primary,
                   onTap: () => _sharePost(item),
                 ),
-                if (!isGuest && item['can_download'] == true)
-                  _buildActionButton(
-                    icon: Icons.download_outlined,
-                    label: 'Save',
-                    color: AppColors.primary,
-                    onTap: () => _downloadContent(item),
-                  ),
               ],
             ),
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
         ],
       ),
     );
@@ -960,13 +959,13 @@ class _FeedScreenState extends State<FeedScreen> with SingleTickerProviderStateM
           onTap: onTap,
           borderRadius: BorderRadius.circular(30),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(vertical: 6),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, size: 20, color: color),
-                const SizedBox(width: 6),
-                Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: color)),
+                Icon(icon, size: 18, color: color),
+                const SizedBox(width: 4),
+                Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: color)),
               ],
             ),
           ),

@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:tapmate/Screen/constants/app_colors.dart';
+import 'package:video_player/video_player.dart';
+import 'package:path_provider/path_provider.dart';
+import '../models/download_item.dart';  // ✅ Import model (has storageType)
 
 class DownloadLibraryScreen extends StatefulWidget {
   const DownloadLibraryScreen({super.key});
@@ -36,13 +39,17 @@ class _DownloadLibraryScreenState extends State<DownloadLibraryScreen> {
         _downloads = history.map((item) {
           try {
             final data = jsonDecode(item);
-            return DownloadItem.fromJson(data);
+            final downloadItem = DownloadItem.fromJson(data);
+            // ✅ ONLY show app storage downloads in library
+            if (downloadItem.storageType == 'app') {
+              return downloadItem;
+            }
+            return null;
           } catch (e) {
             return null;
           }
         }).whereType<DownloadItem>().toList();
 
-        // Sort by newest first
         _downloads.sort((a, b) => b.timestamp.compareTo(a.timestamp));
         _isLoading = false;
       });
@@ -107,11 +114,31 @@ class _DownloadLibraryScreenState extends State<DownloadLibraryScreen> {
     }
   }
 
+  void _playVideo(DownloadItem item) async {
+    final file = File(item.filePath);
+    if (!await file.exists()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Video file not found'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => _VideoPlayerFullScreen(filePath: item.filePath),
+      ),
+    );
+  }
+
   List<DownloadItem> get _filteredDownloads {
     var filtered = _downloads;
 
     if (_filterPlatform != 'All') {
-      filtered = filtered.where((d) => d.platform == _filterPlatform).toList();
+      filtered = filtered.where((d) => d.platform.toLowerCase() == _filterPlatform.toLowerCase()).toList();
     }
 
     if (_searchQuery.isNotEmpty) {
@@ -170,7 +197,7 @@ class _DownloadLibraryScreenState extends State<DownloadLibraryScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Download History'),
+        title: const Text('Library'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         actions: [
@@ -318,6 +345,7 @@ class _DownloadLibraryScreenState extends State<DownloadLibraryScreen> {
                             _formatDate(download.timestamp),
                             style: const TextStyle(fontSize: 12),
                           ),
+                          const SizedBox(height: 2),
                           Text(
                             '${_formatSize(download.size)} • ${download.platform}',
                             style: const TextStyle(fontSize: 11),
@@ -325,13 +353,9 @@ class _DownloadLibraryScreenState extends State<DownloadLibraryScreen> {
                         ],
                       ),
                       trailing: IconButton(
-                        icon: const Icon(Icons.play_circle_outline),
-                        onPressed: () {
-                          // Play video (you can implement video player)
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Video player coming soon')),
-                          );
-                        },
+                        icon: const Icon(Icons.play_circle_outline, color: AppColors.primary, size: 30),
+                        onPressed: () => _playVideo(download),
+                        tooltip: 'Play video',
                       ),
                       onTap: () {
                         showModalBottomSheet(
@@ -341,7 +365,15 @@ class _DownloadLibraryScreenState extends State<DownloadLibraryScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 ListTile(
-                                  leading: const Icon(Icons.delete),
+                                  leading: const Icon(Icons.play_arrow, color: AppColors.primary),
+                                  title: const Text('Play'),
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    _playVideo(download);
+                                  },
+                                ),
+                                ListTile(
+                                  leading: const Icon(Icons.delete, color: Colors.red),
                                   title: const Text('Delete'),
                                   onTap: () {
                                     Navigator.pop(context);
@@ -352,8 +384,8 @@ class _DownloadLibraryScreenState extends State<DownloadLibraryScreen> {
                                   leading: const Icon(Icons.share),
                                   title: const Text('Share'),
                                   onTap: () {
-                                    // Implement share
                                     Navigator.pop(context);
+                                    _shareVideo(download);
                                   },
                                 ),
                                 ListTile(
@@ -377,6 +409,13 @@ class _DownloadLibraryScreenState extends State<DownloadLibraryScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _shareVideo(DownloadItem item) async {
+    // TODO: Implement share functionality
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Share feature coming soon')),
     );
   }
 
@@ -423,15 +462,15 @@ class _DownloadLibraryScreenState extends State<DownloadLibraryScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Name: ${item.title}'),
-            const SizedBox(height: 8),
-            Text('Platform: ${item.platform}'),
-            const SizedBox(height: 8),
-            Text('Size: ${_formatSize(item.size)}'),
-            const SizedBox(height: 8),
-            Text('Path: ${item.filePath}'),
-            const SizedBox(height: 8),
-            Text('Downloaded: ${_formatDate(item.timestamp)}'),
+            _infoRow('Name', item.title),
+            const Divider(),
+            _infoRow('Platform', item.platform),
+            const Divider(),
+            _infoRow('Size', _formatSize(item.size)),
+            const Divider(),
+            _infoRow('Path', item.filePath),
+            const Divider(),
+            _infoRow('Downloaded', _formatDate(item.timestamp)),
           ],
         ),
         actions: [
@@ -443,44 +482,216 @@ class _DownloadLibraryScreenState extends State<DownloadLibraryScreen> {
       ),
     );
   }
-}
 
-class DownloadItem {
-  final String id;
-  final String platform;
-  final String title;
-  final String filePath;
-  final int size;
-  final DateTime timestamp;
-
-  DownloadItem({
-    required this.id,
-    required this.platform,
-    required this.title,
-    required this.filePath,
-    required this.size,
-    required this.timestamp,
-  });
-
-  factory DownloadItem.fromJson(Map<String, dynamic> json) {
-    return DownloadItem(
-      id: json['id'],
-      platform: json['platform'],
-      title: json['title'],
-      filePath: json['filePath'],
-      size: json['size'] ?? 0,
-      timestamp: DateTime.parse(json['timestamp']),
+  Widget _infoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 13),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
     );
   }
+}
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'platform': platform,
-      'title': title,
-      'filePath': filePath,
-      'size': size,
-      'timestamp': timestamp.toIso8601String(),
-    };
+// 🔥 REMOVED duplicate DownloadItem class - now using from models/download_item.dart
+
+// Video Player Full Screen Widget
+class _VideoPlayerFullScreen extends StatefulWidget {
+  final String filePath;
+  const _VideoPlayerFullScreen({required this.filePath});
+
+  @override
+  State<_VideoPlayerFullScreen> createState() => _VideoPlayerFullScreenState();
+}
+
+class _VideoPlayerFullScreenState extends State<_VideoPlayerFullScreen> {
+  late VideoPlayerController _controller;
+  bool _isInitialized = false;
+  bool _isPlaying = false;
+  Duration _duration = Duration.zero;
+  Duration _position = Duration.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializePlayer();
+  }
+
+  Future<void> _initializePlayer() async {
+    try {
+      final file = File(widget.filePath);
+      if (!await file.exists()) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Video file not found'), backgroundColor: Colors.red),
+          );
+          Navigator.pop(context);
+        }
+        return;
+      }
+
+      _controller = VideoPlayerController.file(file);
+      await _controller.initialize();
+      await _controller.setLooping(false);
+
+      _controller.addListener(() {
+        if (mounted) {
+          setState(() {
+            _position = _controller.value.position;
+            _duration = _controller.value.duration;
+            _isPlaying = _controller.value.isPlaying;
+          });
+        }
+      });
+
+      setState(() {
+        _isInitialized = true;
+        _duration = _controller.value.duration;
+      });
+    } catch (e) {
+      print('Error initializing video player: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not play this video'), backgroundColor: Colors.red),
+        );
+        Navigator.pop(context);
+      }
+    }
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return '$minutes:$seconds';
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: const Text('Video Player'),
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: _isInitialized
+          ? Column(
+        children: [
+          Expanded(
+            child: Center(
+              child: AspectRatio(
+                aspectRatio: _controller.value.aspectRatio,
+                child: VideoPlayer(_controller),
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: Colors.black,
+            child: Column(
+              children: [
+                VideoProgressIndicator(
+                  _controller,
+                  allowScrubbing: true,
+                  colors: VideoProgressColors(
+                    playedColor: AppColors.primary,
+                    bufferedColor: Colors.grey[800]!,
+                    backgroundColor: Colors.grey[900]!,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.replay_10, color: Colors.white, size: 28),
+                      onPressed: () {
+                        final newPosition = _controller.value.position - const Duration(seconds: 10);
+                        _controller.seekTo(newPosition);
+                      },
+                    ),
+                    const SizedBox(width: 20),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        icon: Icon(
+                          _isPlaying ? Icons.pause : Icons.play_arrow,
+                          color: Colors.white,
+                          size: 32,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _isPlaying ? _controller.pause() : _controller.play();
+                          });
+                        },
+                        iconSize: 32,
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    IconButton(
+                      icon: const Icon(Icons.forward_10, color: Colors.white, size: 28),
+                      onPressed: () {
+                        final newPosition = _controller.value.position + const Duration(seconds: 10);
+                        _controller.seekTo(newPosition);
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _formatDuration(_position),
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                    ),
+                    const Text(' / ', style: TextStyle(color: Colors.white)),
+                    Text(
+                      _formatDuration(_duration),
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      )
+          : const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      ),
+    );
   }
 }

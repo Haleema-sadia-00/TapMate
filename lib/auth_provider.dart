@@ -14,6 +14,7 @@ class AuthProvider extends ChangeNotifier {
   bool _isNewSignUp = false;
   String _userEmail = '';
   String _userName = '';
+  Map<String, dynamic> _userData = {};
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -26,6 +27,7 @@ class AuthProvider extends ChangeNotifier {
   bool get isNewSignUp => _isNewSignUp;
   String get userEmail => _userEmail;
   String get userName => _userName;
+  Map<String, dynamic> get userData => _userData;
 
   AuthProvider() {
     _loadAuthState();
@@ -42,13 +44,26 @@ class AuthProvider extends ChangeNotifier {
         _isLoggedIn = true;
         _isGuest = false;
 
-        // Check if user is new (hasn't completed onboarding/permissions)
         await _checkIfNewUser(user.uid);
+        await _loadUserDataFromFirestore(user.uid);
 
         notifyListeners();
       }
     } catch (e) {
       print('Error checking current user: $e');
+    }
+  }
+
+  Future<void> _loadUserDataFromFirestore(String uid) async {
+    try {
+      DocumentSnapshot doc = await _firestore.collection('users').doc(uid).get();
+      if (doc.exists) {
+        _userData = doc.data() as Map<String, dynamic>;
+        _userName = _userData['name'] ?? _userName;
+        _userEmail = _userData['email'] ?? _userEmail;
+      }
+    } catch (e) {
+      print('Error loading user data: $e');
     }
   }
 
@@ -167,7 +182,6 @@ class AuthProvider extends ChangeNotifier {
   // 🔥 FIREBASE LOGIN METHOD
   Future<Map<String, dynamic>> loginWithEmailPassword(String email, String password) async {
     try {
-      // Validate inputs
       if (email.isEmpty || password.isEmpty) {
         return {'success': false, 'message': 'Email and password are required'};
       }
@@ -188,7 +202,6 @@ class AuthProvider extends ChangeNotifier {
       _isGuest = false;
       _isNewSignUp = false;
 
-      // Check if user exists in Firestore
       bool isNewUser = false;
       try {
         DocumentSnapshot userDoc = await _firestore
@@ -200,14 +213,12 @@ class AuthProvider extends ChangeNotifier {
           Map<String, dynamic> data = userDoc.data() as Map<String, dynamic>;
           isNewUser = data['isNewUser'] ?? false;
 
-          // Update login info
           await _firestore.collection('users').doc(_userId).update({
             'lastLogin': FieldValue.serverTimestamp(),
             'loginCount': FieldValue.increment(1),
             'updatedAt': FieldValue.serverTimestamp(),
           });
         } else {
-          // Create user document if not exists
           await _firestore.collection('users').doc(_userId).set({
             'name': _userName.isNotEmpty ? _userName : email.split('@').first,
             'email': _userEmail,
@@ -222,10 +233,8 @@ class AuthProvider extends ChangeNotifier {
         }
       } catch (e) {
         print('Firestore error during login: $e');
-        // Continue even if Firestore fails - user is still authenticated
       }
 
-      // Save to SharedPreferences
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('is_logged_in', true);
@@ -294,7 +303,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // 🔥 FIREBASE SIGNUP METHOD - FIXED
+  // 🔥 FIREBASE SIGNUP METHOD
   Future<Map<String, dynamic>> signUpWithEmailPassword({
     required String name,
     required String email,
@@ -305,12 +314,10 @@ class AuthProvider extends ChangeNotifier {
     String? username, required String recoveryEmail,
   }) async {
     try {
-      // Validate required fields
       if (name.isEmpty || email.isEmpty || password.isEmpty) {
         return {'success': false, 'message': 'All required fields must be filled'};
       }
 
-      // Create user in Firebase Auth
       UserCredential result;
       try {
         result = await _auth.createUserWithEmailAndPassword(
@@ -326,24 +333,19 @@ class AuthProvider extends ChangeNotifier {
         return {'success': false, 'message': 'Failed to create account'};
       }
 
-      // Update display name
       try {
         await result.user!.updateDisplayName(name);
         await result.user!.reload();
       } catch (e) {
         print('Error updating display name: $e');
-        // Continue even if display name update fails
       }
 
-      // Send email verification
       try {
         await result.user!.sendEmailVerification();
       } catch (e) {
         print('Error sending verification email: $e');
-        // Continue even if verification email fails
       }
 
-      // Prepare user data for Firestore
       Map<String, dynamic> userData = {
         'name': name.trim(),
         'email': email.trim().toLowerCase(),
@@ -355,7 +357,6 @@ class AuthProvider extends ChangeNotifier {
         'loginCount': 1,
       };
 
-      // Add optional fields only if they're provided and not empty
       if (phone != null && phone.trim().isNotEmpty) {
         userData['phone'] = phone.trim();
       }
@@ -368,15 +369,12 @@ class AuthProvider extends ChangeNotifier {
         userData['gender'] = gender.trim();
       }
 
-      // Save to Firestore
       try {
         await _firestore.collection('users').doc(result.user!.uid).set(userData);
       } catch (e) {
         print('Error saving to Firestore: $e');
-        // Continue even if Firestore fails - user is still authenticated
       }
 
-      // Update local state
       _userId = result.user!.uid;
       _userEmail = result.user!.email ?? email.trim();
       _userName = name.trim();
@@ -384,7 +382,6 @@ class AuthProvider extends ChangeNotifier {
       _isGuest = false;
       _isNewSignUp = true;
 
-      // Save to SharedPreferences
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('is_logged_in', true);
@@ -431,7 +428,6 @@ class AuthProvider extends ChangeNotifier {
               fallbackEmail: email.trim(),
             );
 
-            // Ensure user profile exists for recovered signups.
             await _firestore.collection('users').doc(fallbackUser.uid).set({
               'name': fallbackUser.displayName?.isNotEmpty == true
                   ? fallbackUser.displayName
@@ -466,33 +462,176 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  // ============= 🔥 EMAIL VERIFICATION METHODS =============
+
+  // 🔥 Send verification email
+  Future<Map<String, dynamic>> sendVerificationEmail() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        return {'success': false, 'message': 'No user logged in'};
+      }
+
+      await user.sendEmailVerification();
+      debugPrint('✅ Verification email sent to ${user.email}');
+      return {
+        'success': true,
+        'message': 'Verification email sent! Please check your inbox.'
+      };
+    } on FirebaseAuthException catch (e) {
+      debugPrint('❌ Error sending verification: ${e.code}');
+      String message = 'Failed to send verification email';
+      switch (e.code) {
+        case 'too-many-requests':
+          message = 'Too many requests. Please try again later.';
+          break;
+        case 'network-request-failed':
+          message = 'Network error. Check your connection.';
+          break;
+        default:
+          message = 'Error: ${e.message}';
+      }
+      return {'success': false, 'message': message};
+    } catch (e) {
+      return {'success': false, 'message': 'An error occurred'};
+    }
+  }
+
+  // 🔥 Check email verification status
+  Future<bool> checkEmailVerification() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return false;
+
+      await user.reload();
+      final updatedUser = _auth.currentUser;
+      final isVerified = updatedUser?.emailVerified ?? false;
+
+      if (isVerified) {
+        await _firestore.collection('users').doc(user.uid).update({
+          'emailVerified': true,
+          'isVerified': true,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+
+        if (_userData.isNotEmpty) {
+          _userData['emailVerified'] = true;
+          _userData['isVerified'] = true;
+        }
+
+        notifyListeners();
+      }
+
+      return isVerified;
+    } catch (e) {
+      debugPrint('Error checking verification: $e');
+      return false;
+    }
+  }
+
+  // 🔥 Sign out unverified user
+  Future<void> signOutUnverified() async {
+    try {
+      await _auth.signOut();
+      _isLoggedIn = false;
+      _userId = '';
+      _userEmail = '';
+      _userName = '';
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('is_logged_in', false);
+      await prefs.setString('user_id', '');
+      await prefs.setString('user_email', '');
+      await prefs.setString('user_name', '');
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error signing out unverified user: $e');
+    }
+  }
+
+  // 🔥 Resend verification email (alias)
+  Future<Map<String, dynamic>> resendOtp(String email) async {
+    return await sendVerificationEmail();
+  }
+
+  // 🔥 Verify email (for OTP - kept for compatibility)
+  Future<Map<String, dynamic>> verifyEmail(String otp) async {
+    try {
+      User? user = _auth.currentUser;
+      if (user == null) {
+        return {'success': false, 'message': 'No user logged in'};
+      }
+
+      await user.reload();
+      user = _auth.currentUser;
+
+      if (user?.emailVerified == true) {
+        try {
+          await _firestore.collection('users').doc(user!.uid).update({
+            'emailVerified': true,
+            'verifiedAt': FieldValue.serverTimestamp(),
+            'isNewUser': false,
+          });
+        } catch (e) {
+          print('Error updating email verified status: $e');
+        }
+
+        _isNewSignUp = false;
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('is_new_signup', false);
+
+        return {'success': true, 'message': 'Email verified successfully!'};
+      } else {
+        return {'success': false, 'message': 'Email not verified yet'};
+      }
+    } catch (e) {
+      print('Email verification error: $e');
+      return {'success': false, 'message': 'Verification failed. Please try again.'};
+    }
+  }
+
   // 🔥 GOOGLE SIGN IN
-// 🔥 ACTUAL GOOGLE SIGN IN IMPLEMENTATION
+// 🔥 GOOGLE SIGN IN - FIXED (shows all accounts)
+// 🔥 GOOGLE SIGN IN - WITH EMAIL VERIFICATION CHECK
   Future<Map<String, dynamic>> signInWithGoogle() async {
     try {
       final GoogleSignIn googleSignIn = GoogleSignIn();
 
-      // 1. Trigger the authentication flow
+      // Force account picker to show
+      await googleSignIn.signOut();
+
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       if (googleUser == null) {
         return {'success': false, 'message': 'Sign in aborted by user'};
       }
 
-      // 2. Obtain the auth details from the request
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
-      // 3. Create a new credential
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      // 4. Once signed in, return the UserCredential
       UserCredential result = await _auth.signInWithCredential(credential);
       User? user = result.user;
 
       if (user == null) {
         return {'success': false, 'message': 'Firebase sign in failed'};
+      }
+
+      // 🔥 CHECK IF EMAIL IS VERIFIED (Google emails are always verified)
+      // But we still need to check Firestore if user is new
+      final isVerified = user.emailVerified;
+
+      if (!isVerified) {
+        // This shouldn't happen for Google, but handle anyway
+        await user.sendEmailVerification();
+        return {
+          'success': false,
+          'needsVerification': true,
+          'email': user.email,
+          'message': 'Please verify your email before logging in.'
+        };
       }
 
       _userId = user.uid;
@@ -501,7 +640,6 @@ class AuthProvider extends ChangeNotifier {
       _isLoggedIn = true;
       _isGuest = false;
 
-      // 5. Check Firestore and update/create user
       bool isNewUser = false;
       DocumentSnapshot userDoc = await _firestore.collection('users').doc(_userId).get();
 
@@ -515,6 +653,7 @@ class AuthProvider extends ChangeNotifier {
           'isNewUser': true,
           'loginCount': 1,
           'provider': 'google',
+          'emailVerified': true,  // Google emails are verified
         });
       } else {
         await _firestore.collection('users').doc(_userId).update({
@@ -525,7 +664,6 @@ class AuthProvider extends ChangeNotifier {
 
       _isNewSignUp = isNewUser;
 
-      // 6. Save to SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('user_id', _userId);
       await prefs.setString('user_email', _userEmail);
@@ -536,20 +674,21 @@ class AuthProvider extends ChangeNotifier {
 
       notifyListeners();
 
+      // 🔥 If it's a new user, send them to EmailVerificationScreen anyway?
+      // But Google emails are already verified, so go to HomeScreen
       return {
         'success': true,
         'message': 'Google sign in successful',
-        'isNewUser': isNewUser
+        'isNewUser': isNewUser,
+        'emailVerified': true,  // Google emails are verified
       };
     } catch (e) {
       print('Google sign in error: $e');
       return {'success': false, 'message': 'Google sign in failed: ${e.toString()}'};
     }
-  }
-  // 🔥 FACEBOOK SIGN IN
+  }  // 🔥 FACEBOOK SIGN IN
   Future<Map<String, dynamic>> signInWithFacebook() async {
     try {
-      // TODO: Implement actual Facebook Sign In
       await Future.delayed(const Duration(seconds: 1));
 
       String mockUid = 'facebook_${DateTime.now().millisecondsSinceEpoch}';
@@ -609,58 +748,6 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // 🔥 VERIFY EMAIL
-  Future<Map<String, dynamic>> verifyEmail(String otp) async {
-    try {
-      User? user = _auth.currentUser;
-      if (user == null) {
-        return {'success': false, 'message': 'No user logged in'};
-      }
-
-      await user.reload();
-      user = _auth.currentUser;
-
-      if (user?.emailVerified == true) {
-        try {
-          await _firestore.collection('users').doc(user!.uid).update({
-            'emailVerified': true,
-            'verifiedAt': FieldValue.serverTimestamp(),
-            'isNewUser': false,
-          });
-        } catch (e) {
-          print('Error updating email verified status: $e');
-        }
-
-        // Clear new signup flag
-        _isNewSignUp = false;
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('is_new_signup', false);
-
-        return {'success': true, 'message': 'Email verified successfully!'};
-      } else {
-        return {'success': false, 'message': 'Email not verified yet'};
-      }
-    } catch (e) {
-      print('Email verification error: $e');
-      return {'success': false, 'message': 'Verification failed. Please try again.'};
-    }
-  }
-
-  // 🔥 RESEND VERIFICATION EMAIL
-  Future<Map<String, dynamic>> resendOtp(String email) async {
-    try {
-      User? user = _auth.currentUser;
-      if (user != null) {
-        await user.sendEmailVerification();
-        return {'success': true, 'message': 'Verification email sent!'};
-      }
-      return {'success': false, 'message': 'No user logged in'};
-    } catch (e) {
-      print('Resend OTP error: $e');
-      return {'success': false, 'message': 'Failed to resend verification email'};
-    }
-  }
-
   // 🔥 SET USER INFO
   Future<void> setUserInfo({required String userId, required String email, String? name}) async {
     try {
@@ -702,7 +789,6 @@ class AuthProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('is_new_signup', false);
 
-      // Also update Firestore
       if (_userId.isNotEmpty && _userId != 'guest') {
         try {
           await _firestore.collection('users').doc(_userId).update({
@@ -831,12 +917,10 @@ class AuthProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('has_completed_permissions', true);
 
-      // Clear new signup flag if needed
       if (_isNewSignUp) {
         _isNewSignUp = false;
         await prefs.setBool('is_new_signup', false);
 
-        // Update Firestore
         if (_userId.isNotEmpty && _userId != 'guest') {
           try {
             await _firestore.collection('users').doc(_userId).update({

@@ -1,14 +1,10 @@
-// lib/Screen/home/edit_profile_screen.dart
-
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:tapmate/Screen/constants/app_colors.dart';
-import 'package:tapmate/auth_provider.dart' as myAuth;
+import 'package:tapmate/Screen/services/cloudinary_imageservice.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final Map<String, dynamic>? userData;
@@ -20,28 +16,65 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  final _formKey = GlobalKey<FormState>();
+  // Controllers
   late TextEditingController _nameController;
   late TextEditingController _usernameController;
   late TextEditingController _bioController;
   late TextEditingController _phoneController;
+  late TextEditingController _websiteController;
 
   final ImagePicker _picker = ImagePicker();
+  final CloudinaryService _cloudinaryService = CloudinaryService();
+
   File? _profileImage;
   String? _profileImageUrl;
   bool _isUploading = false;
-
-  bool _isLoading = false;
+  bool _isLoading = true;
+  String? _selectedGender;
   String? _error;
+  bool _isPrivate = false;
+
+  final List<String> _genderOptions = ['Male', 'Female', 'Prefer not to say', 'Custom'];
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.userData?['name'] ?? '');
-    _usernameController = TextEditingController(text: widget.userData?['username'] ?? '');
-    _bioController = TextEditingController(text: widget.userData?['bio'] ?? '');
-    _phoneController = TextEditingController(text: widget.userData?['phone'] ?? '');
-    _profileImageUrl = widget.userData?['profile_pic'];
+
+    // Initialize controllers
+    _nameController = TextEditingController();
+    _usernameController = TextEditingController();
+    _bioController = TextEditingController();
+    _phoneController = TextEditingController();
+    _websiteController = TextEditingController();
+
+    _loadUserData();
+  }
+
+  void _loadUserData() {
+    try {
+      final userData = widget.userData ?? {};
+
+      _nameController.text = userData['name'] ?? '';
+      _usernameController.text = userData['username'] ?? '';
+      _bioController.text = userData['bio'] ?? '';
+      _phoneController.text = userData['phone'] ?? '';
+      _websiteController.text = userData['website'] ?? '';
+
+      _profileImageUrl = userData['profile_pic'];
+      _selectedGender = userData['gender'] ?? 'Prefer not to say';
+      _isPrivate = userData['is_private'] ?? false;
+
+      print('📸 Loaded profile image URL: $_profileImageUrl');
+    } catch (e) {
+      print('Error loading data: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -50,6 +83,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _usernameController.dispose();
     _bioController.dispose();
     _phoneController.dispose();
+    _websiteController.dispose();
     super.dispose();
   }
 
@@ -75,6 +109,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   if (image != null) {
                     setState(() {
                       _profileImage = File(image.path);
+                      _profileImageUrl = null;
                     });
                   }
                 },
@@ -91,6 +126,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   if (photo != null) {
                     setState(() {
                       _profileImage = File(photo.path);
+                      _profileImageUrl = null;
                     });
                   }
                 },
@@ -113,27 +149,23 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  // --- Upload Logic ---
-  Future<String?> _uploadImage() async {
+  // --- Upload to Cloudinary ---
+  Future<String?> _uploadImageToCloudinary() async {
     if (_profileImage == null) return _profileImageUrl;
 
     try {
       setState(() => _isUploading = true);
 
-      User? user = FirebaseAuth.instance.currentUser;
-      if (user == null) throw Exception('No user logged in');
+      String? imageUrl = await _cloudinaryService.uploadImage(_profileImage!);
 
-      String fileName = 'profile_${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final Reference ref = FirebaseStorage.instance.ref().child('profile_pics/$fileName');
-
-      final UploadTask uploadTask = ref.putFile(_profileImage!);
-      final TaskSnapshot snapshot = await uploadTask;
-
-      final String downloadUrl = await snapshot.ref.getDownloadURL();
-
-      return downloadUrl;
+      if (imageUrl != null) {
+        print('✅ Uploaded to Cloudinary: $imageUrl');
+        return imageUrl;
+      } else {
+        throw Exception('Cloudinary upload failed');
+      }
     } catch (e) {
-      print('Error uploading image: $e');
+      print('❌ Error uploading to Cloudinary: $e');
       setState(() {
         _error = 'Failed to upload image: $e';
       });
@@ -158,61 +190,93 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       String? imageUrl;
       if (_profileImage != null) {
-        imageUrl = await _uploadImage();
+        imageUrl = await _uploadImageToCloudinary();
       }
 
       final Map<String, dynamic> updateData = {
-        'name': _nameController.text.trim(),
-        'username': _usernameController.text.trim(),
+        'name': _nameController.text.trim().isEmpty ? 'User' : _nameController.text.trim(),
+        'username': _usernameController.text.trim().isEmpty
+            ? user.email?.split('@').first ?? 'user'
+            : _usernameController.text.trim(),
         'bio': _bioController.text.trim(),
         'phone': _phoneController.text.trim(),
-        'email': user.email,
+        'website': _websiteController.text.trim(),
+        'gender': _selectedGender ?? 'Prefer not to say',
+        'is_private': _isPrivate,
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
+      String? finalProfilePic = _profileImageUrl;
+
       if (imageUrl != null) {
         updateData['profile_pic'] = imageUrl;
-      } else if (_profileImageUrl == null) {
+        finalProfilePic = imageUrl;
+        setState(() {
+          _profileImageUrl = imageUrl;
+          _profileImage = null;
+        });
+        print('✅ Saving new profile picture (Cloudinary): $imageUrl');
+      } else if (_profileImageUrl != null && _profileImageUrl!.isNotEmpty) {
+        updateData['profile_pic'] = _profileImageUrl;
+        finalProfilePic = _profileImageUrl;
+        print('✅ Keeping existing profile picture: $_profileImageUrl');
+      } else {
         updateData['profile_pic'] = '';
+        finalProfilePic = '';
+        print('⚠️ No profile picture to save');
       }
 
+      // Save to Firestore
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set(
         updateData,
         SetOptions(merge: true),
       );
 
+      print('✅ Profile data saved to Firestore');
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Profile updated successfully!'),
+            content: Text('✅ Profile updated successfully!'),
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pop(context, true);
+
+        Navigator.pop(context, {
+          'success': true,
+          'profile_pic': finalProfilePic,
+          'name': updateData['name'],
+          'username': updateData['username'],
+          'bio': updateData['bio'],
+        });
       }
     } catch (e) {
+      print('❌ Save error: $e');
       setState(() {
         _error = e.toString();
       });
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
-  String _getInitials(String name) {
-    if (name.trim().isEmpty) return 'U';
-    final List<String> parts = name.trim().split(' ');
+  String _getInitials() {
+    String name = _nameController.text.trim();
+    if (name.isEmpty) return 'U';
+    final List<String> parts = name.split(' ');
     if (parts.length > 1) {
       return (parts[0][0] + parts[1][0]).toUpperCase();
     }
     return parts[0][0].toUpperCase();
   }
 
-  // --- UI Build Helper (Fixes the "Object" error) ---
+  // --- UI Build Helper ---
   Widget _buildProfileContent() {
-    // 1. Agar user ne gallery se image pick ki hai (Local File)
+    // New image selected
     if (_profileImage != null) {
       return Image.file(
         _profileImage!,
@@ -222,25 +286,33 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       );
     }
 
-    // 2. Agar pick nahi ki par pehle se URL mojood hai (Firebase URL)
+    // Existing Cloudinary URL
     if (_profileImageUrl != null && _profileImageUrl!.isNotEmpty) {
       return Image.network(
         _profileImageUrl!,
         fit: BoxFit.cover,
         width: 120,
         height: 120,
-        errorBuilder: (context, error, stackTrace) => _initialsWidget(),
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return const Center(
+            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) {
+          print('❌ Error loading Cloudinary image: $error');
+          return _initialsWidget();
+        },
       );
     }
 
-    // 3. Agar kuch bhi nahi hai to initials dikhao
     return _initialsWidget();
   }
 
   Widget _initialsWidget() {
     return Center(
       child: Text(
-        _getInitials(_nameController.text),
+        _getInitials(),
         style: const TextStyle(
           fontSize: 48,
           fontWeight: FontWeight.bold,
@@ -250,9 +322,83 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
+  // Gender selection bottom sheet
+  Future<void> _showGenderPicker() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Select Gender',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ..._genderOptions.map((gender) => ListTile(
+                leading: Radio<String>(
+                  value: gender,
+                  groupValue: _selectedGender,
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedGender = value;
+                    });
+                    Navigator.pop(context);
+                  },
+                  activeColor: AppColors.primary,
+                ),
+                title: Text(
+                  gender,
+                  style: const TextStyle(fontSize: 16),
+                ),
+                onTap: () {
+                  setState(() {
+                    _selectedGender = gender;
+                  });
+                  Navigator.pop(context);
+                },
+              )),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: isDarkMode ? const Color(0xFF121212) : AppColors.lightSurface,
+        appBar: AppBar(
+          title: const Text('Edit Profile'),
+          backgroundColor: Colors.transparent,
+          foregroundColor: isDarkMode ? Colors.white : AppColors.textMain,
+        ),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Loading profile...'),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: isDarkMode ? const Color(0xFF121212) : AppColors.lightSurface,
@@ -332,10 +478,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(60),
-                        child: _buildProfileContent(), // Error fixed here
+                        child: _buildProfileContent(),
                       ),
                     ),
-                    // Camera Icon
                     Positioned(
                       bottom: 0,
                       right: 0,
@@ -368,11 +513,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: 8),
+              Center(
+                child: Text(
+                  'Tap to change profile photo',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                ),
+              ),
               const SizedBox(height: 30),
 
               // Name Field
               TextFormField(
                 controller: _nameController,
+                onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
                   labelText: 'Full Name',
                   prefixIcon: const Icon(Icons.person_outline),
@@ -458,17 +614,100 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   color: isDarkMode ? Colors.white : AppColors.textMain,
                 ),
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 15),
 
-              // Email note
-              Text(
-                'Your email cannot be changed',
+              // Website/Links Field
+              TextFormField(
+                controller: _websiteController,
+                keyboardType: TextInputType.url,
+                decoration: InputDecoration(
+                  labelText: 'Website / Link',
+                  hintText: 'https://yourwebsite.com',
+                  prefixIcon: const Icon(Icons.link),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: isDarkMode ? const Color(0xFF2C2C2C) : Colors.grey[50],
+                ),
                 style: TextStyle(
-                  fontSize: 12,
-                  color: isDarkMode ? Colors.grey[500] : Colors.grey[600],
-                  fontStyle: FontStyle.italic,
+                  color: isDarkMode ? Colors.white : AppColors.textMain,
                 ),
               ),
+              const SizedBox(height: 15),
+
+              // Private Account Toggle
+              SwitchListTile(
+                title: const Text('Private Account'),
+                subtitle: Text(
+                  _isPrivate
+                      ? 'Only followers can see your posts'
+                      : 'Anyone can follow you',
+                ),
+                value: _isPrivate,
+                onChanged: (value) {
+                  setState(() {
+                    _isPrivate = value;
+                  });
+                },
+                activeColor: AppColors.primary,
+                contentPadding: EdgeInsets.zero,
+              ),
+              const SizedBox(height: 15),
+
+              // Gender Selection Field
+              GestureDetector(
+                onTap: _showGenderPicker,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: isDarkMode ? const Color(0xFF2C2C2C) : Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isDarkMode ? Colors.grey[800]! : Colors.grey[300]!,
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.person_outline,
+                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        size: 22,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Gender',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _selectedGender ?? 'Prefer not to say',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: isDarkMode ? Colors.white : AppColors.textMain,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.chevron_right,
+                        color: isDarkMode ? Colors.grey[500] : Colors.grey[400],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 30),
             ],
           ),
         ),

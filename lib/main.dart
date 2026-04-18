@@ -18,6 +18,7 @@ import 'package:tapmate/theme_provider.dart';
 import 'package:tapmate/auth_provider.dart';
 import 'package:tapmate/utils/guide_manager.dart';
 import 'package:tapmate/Screen/constants/app_colors.dart';
+import 'Screen/home/video_player_screen.dart';
 import 'auth_wrapper.dart';
 import 'firebase_options.dart';
 import 'utils/settings_provider.dart';  // 🔥 ADD THIS IMPORT
@@ -225,6 +226,7 @@ class MyApp extends StatelessWidget {
                 '/create-post': (context) =>  CreatePostScreen(),
                 '/youtube_downloader': (context) => const YouTubeDownloaderScreen(),
                 '/download_library': (context) => const DownloadLibraryScreen(),
+                '/video_player': (context) => const VideoPlayerScreen(filePath: ''),
               },
             );
           },
